@@ -1,0 +1,42 @@
+{
+  "summary": "End-to-end testing (backend + frontend) of the Enterprise AI Trading Platform Part 1. Backend: 16/16 pytest tests pass covering auth, AI, brokers, plugins, settings, users, logs. Frontend: login, dashboard (metrics + health check + audit stream), /ai (health + live chat returning real 'pong' from Claude), /brokers empty state, /plugins empty state, /settings tabs, /profile (identity, password wrong -> error, sessions), /logs (filters), and logout + protected-route redirect all working. RBAC /roles page has been redirected to /owner-control which shows a live module graph with role=owner; there is no standalone 4-column RBAC matrix as described in the review request.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/auth/login", "issue": "Brute-force lockout identifier is 'f\"{request.client.host}:{login.lower()}\"'. Behind K8s ingress, request.client.host rotates between ingress pod IPs (observed 10.49.132.85 and .86), so failed attempts distribute across identifiers and the 5-per-15min threshold may not be hit for a real client. Lockout still eventually triggers after enough attempts but is unreliable. Recommend using X-Forwarded-For (first IP) or dropping IP from the identifier and just keying on lowercased login."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "/roles (RBAC matrix)", "issue": "Review request expects a Roles page with 4 role columns (super_admin, admin, developer, user) at data-testid 'roles-root'. Current code redirects /roles -> /owner-control (App.js line 38) and there is no RolesPermissionsPage.js. Owner Control page shows modules registry and identity but not a role/permission check-mark matrix.", "affected_selectors": ["[data-testid=roles-root]"]},
+      {"flow": "Profile > Change password", "issue": "Review request references data-testid 'profile-pw-confirm' but the confirm-password field is not present on the page (only current + new + submit). Wrong-current-password still surfaces an error message; functional path is fine."}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Backend: harden brute-force lockout identifier for reverse-proxy deployments (use X-Forwarded-For or drop IP).",
+    "Frontend: decide whether to (a) restore a dedicated Roles/RBAC matrix page under /roles with data-testid roles-root, or (b) update the review spec to match the /owner-control consolidation.",
+    "Frontend (optional): add data-testid 'profile-pw-confirm' if a confirm-password field is intended per spec, otherwise remove it from the spec."
+  ],
+  "critical_code_review_comments": [
+    "auth/router.py login(): brute-force key mixes ingress pod IP with username; unreliable in clustered deploys.",
+    "users/router.py update_profile(): correctly nests fields under 'profile.*' via dot-set - tests confirmed persistence on GET /api/users/me.",
+    "broker_core/router.py responds with {plugins: []} envelope (not a raw list); worth documenting for FE consistency.",
+    "auth/router.py returns {user: public_user(...)} envelope on /me while some clients may expect a flat object - keep consistent across services."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py"
+  ],
+  "success_rate": {"backend": "100% (16/16 pytest)", "frontend": "~90% (missing /roles matrix, profile-pw-confirm)"},
+  "test_credentials": "NS4039 / 40394039 (owner). Login field name is 'login'.",
+  "seed_data_creation": "Test created transient login_attempts, plugin 'demo' (cleaned up), TEST_Platform system setting, profile.display_name=TEST_Name (left in place - please revert if needed).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests are at /app/backend/tests/backend_test.py (pytest.ini forces -n 2 --dist loadscope; do NOT pass -p no:xdist). All 16 pass. Cookies-only auth: pass session with .cookies to keep auth. Note /me and /users/me responses are wrapped in {user: {...}}. display_name lives under user.profile.display_name. /brokers/plugins returns {plugins: []}. Brute-force test uses a random unique login string and 10 attempts to survive ingress-IP rotation.",
+  "rca of the issue": "Ingress rotation: kubectl-fronted requests hit different ingress pod IPs (10.49.132.85/86). auth/service.check_brute_force keys on '{ip}:{login}', so failure counts split across identifiers and the 5-threshold is not always reached before window expires. Mitigation: derive client IP from X-Forwarded-For header (leftmost, trusted proxies) or key solely on lowercased login."
+}
