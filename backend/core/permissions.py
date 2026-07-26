@@ -1,33 +1,44 @@
 """
-Owner-only permission engine.
-Single-owner platform — no admin, developer, or user roles.
-The sole role is "owner" with full access to every capability.
+Role & Permission engine.
+Roles: super_admin, admin, developer, user.
+Permissions granted to each role are configurable via settings_store.
+The platform runs single-user for now (owner is super_admin), but the
+role/permission matrix is fully defined and exposed via /api/roles for
+future multi-user extension.
 """
 from typing import Iterable
 
-# Single-owner platform.
-ROLES = ("owner",)
-
-# The owner has access to every capability. Capabilities are kept as a
-# public list so the Owner Control panel can enumerate them.
-CAPABILITIES: list[str] = [
-    "auth:manage",
-    "user:manage",
-    "ai:read", "ai:write",
-    "broker:read", "broker:write",
-    "plugin:read", "plugin:write",
-    "settings:read", "settings:write",
-    "logs:read",
-    "owner-control:manage",
-]
+ROLES = ("super_admin", "admin", "developer", "user")
 
 DEFAULT_PERMISSIONS: dict[str, list[str]] = {
-    "owner": ["*"],
+    "super_admin": ["*"],
+    "admin": [
+        "user:read", "user:write",
+        "ai:read", "ai:write",
+        "broker:read", "broker:write",
+        "plugin:read", "plugin:write",
+        "settings:read", "settings:write",
+        "logs:read",
+    ],
+    "developer": [
+        "ai:read", "ai:write",
+        "broker:read",
+        "plugin:read", "plugin:write",
+        "logs:read",
+    ],
+    "user": [
+        "ai:read",
+        "broker:read",
+        "settings:read",
+    ],
 }
 
 
 def has_permission(role: str, permission: str) -> bool:
-    return role == "owner"  # owner has everything
+    perms = DEFAULT_PERMISSIONS.get(role, [])
+    if "*" in perms:
+        return True
+    return permission in perms
 
 
 def require(role: str, permission: str) -> None:
@@ -37,4 +48,9 @@ def require(role: str, permission: str) -> None:
 
 
 def all_permissions() -> Iterable[str]:
-    return list(CAPABILITIES)
+    seen = set()
+    for perms in DEFAULT_PERMISSIONS.values():
+        for p in perms:
+            if p != "*":
+                seen.add(p)
+    return sorted(seen)

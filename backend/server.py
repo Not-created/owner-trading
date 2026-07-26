@@ -28,7 +28,7 @@ from modules.broker_core.router import router as brokers_router
 from modules.plugins.router import router as plugins_router
 from modules.settings.router import router as settings_router
 from modules.logs.router import router as logs_router
-from modules.owner_control.router import router as owner_control_router
+from modules.roles.router import router as roles_router
 from modules.auth.service import seed_owner
 
 
@@ -89,7 +89,7 @@ app.include_router(brokers_router)
 app.include_router(plugins_router)
 app.include_router(settings_router)
 app.include_router(logs_router)
-app.include_router(owner_control_router)
+app.include_router(roles_router)
 
 
 def _register_modules() -> None:

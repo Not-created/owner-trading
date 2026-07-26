@@ -41,7 +41,9 @@ async def login(body: LoginBody, request: Request, response: Response):
     fwd = request.headers.get("x-forwarded-for", "")
     real_ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "unknown")
     ip = real_ip
-    identifier = f"{ip}:{body.login.lower()}"
+    # Single-user platform: key brute-force count on the login string only.
+    # Ingress IPs rotate; XFF may be missing. Keying on login is stable.
+    identifier = f"login:{body.login.lower()}"
     await svc.check_brute_force(identifier)
 
     user = await svc.find_user_by_login(body.login)
@@ -147,8 +149,8 @@ async def revoke_session_ep(session_id: str, user=Depends(get_current_user)):
 @router.get("/login-history")
 async def login_history(user=Depends(get_current_user)):
     db = get_db()
-    ident_prefix = f":{user['username'].lower()}"
-    cursor = db.login_attempts.find({"identifier": {"$regex": ident_prefix + "$"}}).sort("created_at_dt", -1).limit(50)
+    identifier = f"login:{user['username'].lower()}"
+    cursor = db.login_attempts.find({"identifier": identifier}).sort("created_at_dt", -1).limit(50)
     out = []
     async for a in cursor:
         out.append({

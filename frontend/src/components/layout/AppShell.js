@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, Cpu, Network, Puzzle, Settings, User, Command, Terminal, Power,
+  LayoutDashboard, Cpu, Network, Puzzle, Settings, User, Shield, Terminal, Power,
   CircleDot, Menu, X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -10,10 +10,10 @@ import { TEST_IDS } from "@/constants/testIds";
 
 const NAV = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard, tid: TEST_IDS.shell.navDashboard },
-  { to: "/owner-control", label: "Owner Control", icon: Command, tid: TEST_IDS.shell.navOwnerControl },
   { to: "/ai", label: "AI Core", icon: Cpu, tid: TEST_IDS.shell.navAI },
   { to: "/brokers", label: "Brokers", icon: Network, tid: TEST_IDS.shell.navBrokers },
   { to: "/plugins", label: "Plugins", icon: Puzzle, tid: TEST_IDS.shell.navPlugins },
+  { to: "/roles", label: "Roles", icon: Shield, tid: TEST_IDS.shell.navRoles },
   { to: "/logs", label: "Audit Logs", icon: Terminal, tid: TEST_IDS.shell.navLogs },
   { to: "/settings", label: "Settings", icon: Settings, tid: TEST_IDS.shell.navSettings },
   { to: "/profile", label: "Profile", icon: User, tid: TEST_IDS.shell.navProfile },

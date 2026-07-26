@@ -100,7 +100,7 @@ async def seed_owner() -> None:
             "username_lower": s.owner_username.lower(),
             "email": s.owner_email,
             "password_hash": hash_password(s.owner_password),
-            "role": "owner",
+            "role": "super_admin",
             "profile": {
                 "display_name": "Platform Owner",
                 "avatar_url": None,
@@ -114,8 +114,8 @@ async def seed_owner() -> None:
         })
     else:
         updates: dict = {}
-        if existing.get("role") != "owner":
-            updates["role"] = "owner"
+        if existing.get("role") != "super_admin":
+            updates["role"] = "super_admin"
         if not verify_password(s.owner_password, existing["password_hash"]):
             updates["password_hash"] = hash_password(s.owner_password)
         if updates:

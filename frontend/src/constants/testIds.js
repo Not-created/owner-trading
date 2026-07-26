@@ -13,6 +13,7 @@ export const TEST_IDS = {
     logout: "app-logout",
     navDashboard: "nav-dashboard",
     navOwnerControl: "nav-owner-control",
+    navRoles: "nav-roles",
     navAI: "nav-ai",
     navBrokers: "nav-brokers",
     navPlugins: "nav-plugins",
@@ -73,6 +74,9 @@ export const TEST_IDS = {
     changePwSubmit: "profile-pw-submit",
     sessions: "profile-sessions",
     logoutAll: "profile-logout-all",
+  },
+  roles: {
+    root: "roles-root",
   },
   logs: {
     root: "logs-root",
