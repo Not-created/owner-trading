@@ -1,15 +1,17 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Cpu, Network, Puzzle, Settings, User, Shield, Terminal, Power,
-  CircleDot, Menu, X,
+  CircleDot, Menu, X, Command,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { TEST_IDS } from "@/constants/testIds";
+import TopTicker from "@/components/layout/TopTicker";
 
 const NAV = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard, tid: TEST_IDS.shell.navDashboard },
+  { to: "/owner-control", label: "Owner Control", icon: Command, tid: TEST_IDS.shell.navOwnerControl },
   { to: "/ai", label: "AI Core", icon: Cpu, tid: TEST_IDS.shell.navAI },
   { to: "/brokers", label: "Brokers", icon: Network, tid: TEST_IDS.shell.navBrokers },
   { to: "/plugins", label: "Plugins", icon: Puzzle, tid: TEST_IDS.shell.navPlugins },
@@ -157,7 +159,7 @@ export default function AppShell({ children }) {
             </button>
           </div>
         </header>
-
+        <TopTicker />
         <main className="flex-1 overflow-x-hidden overflow-y-auto">
           {children}
         </main>

@@ -8,6 +8,7 @@ import AppShell from "@/components/layout/AppShell";
 
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
+import OwnerControlPage from "@/pages/OwnerControlPage";
 import AIProvidersPage from "@/pages/AIProvidersPage";
 import BrokersPage from "@/pages/BrokersPage";
 import PluginsPage from "@/pages/PluginsPage";
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Shell><DashboardPage /></Shell>} />
+            <Route path="/owner-control" element={<Shell><OwnerControlPage /></Shell>} />
             <Route path="/ai" element={<Shell><AIProvidersPage /></Shell>} />
             <Route path="/brokers" element={<Shell><BrokersPage /></Shell>} />
             <Route path="/plugins" element={<Shell><PluginsPage /></Shell>} />

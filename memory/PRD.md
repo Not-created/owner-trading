@@ -9,46 +9,53 @@ zero-trust, no placeholder code, upgradeable across many years without rewrites.
   security posture, audit stream, and personal profile.
 
 ## Core requirements (static)
-- Clean architecture, SOLID, repository/module pattern, dependency injection, event-driven.
-- Universal Broker Engine as a plugin system (no hardcoded broker).
-- Universal AI Core (OpenAI + Claude + Gemini pluggable, replaceable, with failover).
-- Plugin/Module registry, Settings engine, Internal API framework, Event bus, Service layer.
-- Auth: single-user JWT, sessions, brute-force lockout, encrypted secrets, security headers.
-- Roles: super_admin / admin / developer / user with a declarative permission matrix.
+- Clean architecture, SOLID, module pattern, dependency injection, event-driven.
+- Universal Broker Engine as a plugin system (Alpaca plugin registered; others via BrokerPluginBase).
+- Universal AI Core (OpenAI + Claude + Gemini pluggable, replaceable, failover).
+- Universal Market Data (Yahoo Finance provider live, plugin-style).
+- Plugin/Module registry, Settings engine, Event bus, Service layer.
+- Auth: single-user JWT, sessions, brute-force lockout, encrypted secrets, security headers,
+  optional TOTP 2FA with trusted-device bypass and backup codes.
+- Roles: super_admin / admin / developer / user with declarative permission matrix.
 - Structured, searchable audit logs in MongoDB.
+- **AI Developer inside Owner Control** — read-only project inspector + AI-assisted planner.
+  Every destructive action gated by an Approval record; nothing runs automatically.
 
-## Implementation (2026-02, milestones 1A+1B+1C complete)
-### Backend (`/app/backend`)
-- `core/` — config engine, database, logging_service (Mongo audit store), security (Fernet + bcrypt),
-  events bus, permissions matrix, error handling with typed codes.
-- `modules/auth/` — login, logout, /me, refresh, change-password, sessions, login-history,
-  brute-force protection, JWT (access 15m + refresh 7d), httpOnly cookies.
-- `modules/users/` — profile management.
-- `modules/roles/` — RBAC matrix endpoint.
-- `modules/ai_core/` — abstract `AIProviderBase`, registry, OpenAI/Claude/Gemini providers via
-  `emergentintegrations`, chat, health-check, usage tracking, failover.
-- `modules/broker_core/` — abstract `BrokerPluginBase`, registry, account lifecycle with
-  Fernet-encrypted credentials, primary broker selection, connect/disconnect/health.
-- `modules/plugins/` — generic plugin registry (install/enable/disable/uninstall).
-- `modules/settings/` — persisted key/value store with per-key upsert endpoints.
-- `modules/logs/` — searchable audit log endpoints with level/category filters.
-- Security headers middleware, explicit CORS from `FRONTEND_URL`.
+## Implementation status (2026-02)
+### Backend
+- `core/` — config, database, logging_service, security (Fernet + bcrypt),
+  events, permissions, error handling.
+- `modules/auth/` — login, refresh, sessions, brute-force protection, change-password,
+  login-history, **TOTP 2FA + trusted devices**.
+- `modules/users/`, `modules/roles/`.
+- `modules/ai_core/` — abstract `AIProviderBase`, registry, OpenAI/Claude/Gemini, chat,
+  health check, usage tracking, failover; **prompt presets** (seeded starters).
+- `modules/broker_core/` — abstract `BrokerPluginBase`, registry, encrypted accounts,
+  connect/disconnect/health, primary selection.
+- `modules/broker_plugins/alpaca.py` — **first real broker plugin** (paper + live).
+- `modules/market_data/` — abstract MarketDataProvider + Yahoo Finance (yfinance).
+- `modules/plugins/`, `modules/settings/`, `modules/logs/`.
+- `modules/ai_developer/` — read-only project inspector (`project-map`, `modules`,
+  `dependencies`, `db-schema`, `file`, `search`, `snapshot`, `health`), AI-assisted `ask`,
+  and approval workflow (`approvals`, `approvals/{id}/decide`).
 
-### Frontend (`/app/frontend`)
-- Dark Bloomberg/terminal aesthetic (`#0A0A0C` base, `#007AFF` accent, JetBrains Mono for data).
-- Login page (single-user, no sign-up), Command Center, AI Providers, Brokers, Plugins,
-  Settings (4 tabs), Profile (identity/password/sessions/history), Roles matrix, Audit Logs.
-- AuthContext with httpOnly cookies, `withCredentials: true` throughout.
-- Sonner toast, Lucide icons, dark shadcn theme, custom scrollbars, terminal cursor.
+### Frontend
+- Dark Bloomberg terminal aesthetic. IBM Plex Sans + JetBrains Mono + Space Grotesk.
+- **Top-bar live ticker** (Yahoo quotes; auto-refresh 20s) across all authed pages.
+- Pages: Login, Command Center, **Owner Control (Overview, Modules, DB Schema, AI Developer,
+  Approvals)**, AI Core (providers + presets + live chat), Brokers (plugins list, add-account
+  modal, connect/disconnect/primary), Plugins, Settings, Profile (identity, password, **2FA**,
+  trusted devices, sessions, history), Roles matrix, Audit Logs.
+- ProtectedRoute, sonner toasts, complete data-testid coverage.
 
-## Prioritized backlog (P0/P1/P2)
-- **P0 (Part 2)**: real broker plugins (Zerodha, IBKR, Alpaca…), order routing, positions,
-  P&L, market data feed, strategy runner.
-- **P1**: 2FA (TOTP) enablement UI, password reset via email, per-role custom permission edits,
-  encrypted API-key vault UI for AI providers.
-- **P2**: theme editor with live preview, log retention policy, remote-config sync,
-  export/download logs, in-app AI Developer console.
+## Prioritized backlog
+- **P0**: Approval execution engine (write_file, git_commit, deploy) with sandbox + rollback.
+- **P1**: Alpaca positions/orders read + basic order placement UI.
+- **P1**: Trading module (positions, P&L, order routing) — depends on broker plugin.
+- **P2**: Additional broker plugins (IBKR, Zerodha), market-data providers with fallback.
+- **P2**: WebSocket streaming for ticker + AI Developer live diff review.
 
 ## Endpoints inventory
-Auth · Users · Roles · AI · Brokers · Plugins · Settings · Logs · Health.
-See `/app/memory/test_credentials.md` for full auth list.
+Auth (incl. 2FA) · Users · Roles · AI Core · AI Presets · AI Developer · Brokers · Market ·
+Plugins · Settings · Logs · Health.
+Credentials at `/app/memory/test_credentials.md`.

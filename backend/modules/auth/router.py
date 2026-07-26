@@ -29,6 +29,9 @@ class LoginBody(BaseModel):
     login: str = Field(min_length=1, max_length=128)  # username or email
     password: str = Field(min_length=1, max_length=256)
     remember_device: bool = False
+    totp_code: str | None = None            # required if 2FA is enabled and device is not trusted
+    trusted_device_token: str | None = None  # skip 2FA if device was previously trusted
+    trust_this_device: bool = False          # after successful 2FA, remember this device
 
 
 class ChangePasswordBody(BaseModel):
@@ -41,8 +44,6 @@ async def login(body: LoginBody, request: Request, response: Response):
     fwd = request.headers.get("x-forwarded-for", "")
     real_ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "unknown")
     ip = real_ip
-    # Single-user platform: key brute-force count on the login string only.
-    # Ingress IPs rotate; XFF may be missing. Keying on login is stable.
     identifier = f"login:{body.login.lower()}"
     await svc.check_brute_force(identifier)
 
@@ -52,6 +53,21 @@ async def login(body: LoginBody, request: Request, response: Response):
         await log_service.warn("auth", f"Failed login: {body.login}", meta={"ip": ip})
         raise AppError("AUTH_INVALID", status=401)
 
+    # 2FA gate
+    if user.get("two_factor_enabled"):
+        from modules.auth.two_factor import verify_totp_or_raise
+        db = get_db()
+        trusted_ok = False
+        if body.trusted_device_token:
+            td = await db.trusted_devices.find_one({"user_id": str(user["_id"]), "device_id": body.trusted_device_token})
+            if td:
+                trusted_ok = True
+                await db.trusted_devices.update_one({"_id": td["_id"]}, {"$set": {"last_seen_at": datetime.now(timezone.utc).isoformat()}})
+        if not trusted_ok:
+            if not await verify_totp_or_raise(user, body.totp_code):
+                # Do not count this against brute force (password already verified)
+                raise AppError("AUTH_INVALID", status=401, detail="TOTP_REQUIRED" if not body.totp_code else "TOTP_INVALID")
+
     await svc.record_attempt(identifier, success=True)
     user_id = str(user["_id"])
     jti = generate_jti()
@@ -59,12 +75,26 @@ async def login(body: LoginBody, request: Request, response: Response):
     device = {"ip": ip, "user_agent": ua, "remember": body.remember_device}
     await svc.create_session(user_id, jti, device, ttl_days=30 if body.remember_device else 7)
 
+    # Optionally trust this device after successful 2FA login
+    trusted_device_id = None
+    if user.get("two_factor_enabled") and body.trust_this_device:
+        db = get_db()
+        trusted_device_id = secure_token(16)
+        await db.trusted_devices.insert_one({
+            "device_id": trusted_device_id,
+            "user_id": user_id,
+            "label": ua[:80],
+            "user_agent": ua,
+            "trusted_at": datetime.now(timezone.utc).isoformat(),
+            "last_seen_at": datetime.now(timezone.utc).isoformat(),
+        })
+
     access = create_access_token(user_id, jti)
     refresh = create_refresh_token(user_id, jti)
     set_auth_cookies(response, access, refresh)
 
     await log_service.info("auth", f"Login success: {user['username']}", user_id=user_id, meta={"ip": ip})
-    return {"user": svc.public_user(user)}
+    return {"user": svc.public_user(user), "trusted_device_token": trusted_device_id}
 
 
 @router.post("/logout")
