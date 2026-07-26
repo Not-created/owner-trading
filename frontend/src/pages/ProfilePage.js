@@ -93,9 +93,9 @@ export default function ProfilePage() {
         <button data-testid={TEST_IDS.profile.save} onClick={saveProfile} className="h-9 px-4 bg-term-accent text-white font-mono text-[11px] uppercase">Save profile</button>
       </section>
 
-      <section className="border border-term-border bg-term-surface p-6 space-y-4">
+      <section className="border border-term-border bg-term-surface p-4 sm:p-6 space-y-4">
         <div className="font-display text-[13px] font-bold">Change password</div>
-        <div className="grid grid-cols-2 gap-4 max-w-2xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
           <input data-testid={TEST_IDS.profile.changePwCurrent} type="password" placeholder="Current password" value={pwCur} onChange={(e) => setPwCur(e.target.value)}
             className="h-10 px-3 bg-term-panel border border-term-border font-mono text-[12px] focus:border-term-accent focus:outline-none" />
           <input data-testid={TEST_IDS.profile.changePwNew} type="password" placeholder="New password (min 8)" value={pwNew} onChange={(e) => setPwNew(e.target.value)}
@@ -115,12 +115,12 @@ export default function ProfilePage() {
         <div data-testid={TEST_IDS.profile.sessions}>
           {sessions.length === 0 && <div className="p-4 text-term-muted font-mono text-[11px]">No active sessions</div>}
           {sessions.map((s) => (
-            <div key={s.id} className="p-3 border-b border-term-border/50 flex items-center justify-between last:border-0">
-              <div className="font-mono text-[11px]">
-                <div>{s.device?.user_agent?.slice(0, 80) || "unknown"}</div>
-                <div className="text-term-muted">ip {s.device?.ip} · created {s.created_at?.slice(0, 19).replace("T", " ")}</div>
+            <div key={s.id} className="p-3 border-b border-term-border/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 last:border-0">
+              <div className="font-mono text-[11px] min-w-0">
+                <div className="break-all">{s.device?.user_agent?.slice(0, 80) || "unknown"}</div>
+                <div className="text-term-muted break-all">ip {s.device?.ip} · created {s.created_at?.slice(0, 19).replace("T", " ")}</div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 shrink-0">
                 {s.is_current && <span className="font-mono text-[10px] text-term-success">CURRENT</span>}
                 {!s.is_current && (
                   <button onClick={() => revokeSession(s.id)} className="font-mono text-[10px] text-term-danger uppercase hover:underline">Revoke</button>
@@ -135,10 +135,10 @@ export default function ProfilePage() {
         <header className="h-10 px-4 flex items-center border-b border-term-border">
           <div className="font-display text-[13px] font-bold">Recent login history</div>
         </header>
-        <div className="font-mono text-[11px]">
+        <div className="font-mono text-[11px] overflow-x-auto">
           {history.length === 0 && <div className="p-4 text-term-muted">No history</div>}
           {history.map((h, i) => (
-            <div key={i} className="px-4 h-8 flex items-center gap-4 border-b border-term-border/40 last:border-0">
+            <div key={i} className="px-4 h-8 flex items-center gap-4 border-b border-term-border/40 last:border-0 min-w-[520px]">
               <span className="w-40 text-term-muted">{h.created_at?.slice(0, 19).replace("T", " ")}</span>
               <span className={h.success ? "text-term-success" : "text-term-danger"}>{h.success ? "SUCCESS" : "FAILED"}</span>
               <span className="text-term-muted">{h.identifier}</span>

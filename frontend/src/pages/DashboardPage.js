@@ -61,12 +61,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <div data-testid={TEST_IDS.dashboard.root} className="p-6 space-y-6 max-w-[1400px]">
+    <div data-testid={TEST_IDS.dashboard.root} className="p-4 sm:p-6 space-y-6 max-w-[1400px]">
       {/* Header line */}
-      <div className="flex items-baseline justify-between">
+      <div className="flex items-baseline justify-between flex-wrap gap-2">
         <div>
           <div className="font-mono text-[10px] text-term-muted uppercase tracking-wider">// overview</div>
-          <h1 className="font-display text-3xl font-bold tracking-tight">Command Center</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">Command Center</h1>
         </div>
         <div className="font-mono text-[11px] text-term-secondary">
           uptime <span className="text-term-success">nominal</span>

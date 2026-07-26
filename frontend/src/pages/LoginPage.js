@@ -38,7 +38,7 @@ export default function LoginPage() {
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at center, rgba(0,122,255,0.05) 0%, transparent 55%)" }} />
 
       <div className="relative z-10 min-h-screen grid grid-cols-1 lg:grid-cols-2">
-        {/* Left column — brand + system readout */}
+        {/* Left column — brand + system readout (desktop only, keep exactly as-is) */}
         <div className="hidden lg:flex flex-col justify-between p-12 border-r border-term-border">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 border border-term-accent grid place-items-center">
@@ -59,7 +59,7 @@ export default function LoginPage() {
             </h1>
             <p className="max-w-md text-term-secondary text-[13px] leading-relaxed">
               Universal broker abstraction. Multi-provider AI core. Zero-trust security.
-              Single-operator access — no public registration.
+              Owner-only access — no public registration.
             </p>
             <div className="border border-term-border p-4 max-w-md">
               <div className="font-mono text-[10px] text-term-muted uppercase mb-3">// system readout</div>
@@ -78,12 +78,19 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right column — login form */}
-        <div className="flex items-center justify-center p-8">
+        {/* Right column — login form (also renders on mobile) */}
+        <div className="flex items-center justify-center p-6 sm:p-8">
           <div className="w-full max-w-sm">
             <div className="flex items-center gap-2 mb-8 lg:hidden">
-              <Terminal size={16} className="text-term-accent" />
-              <span className="font-display text-base font-bold">TERMINAL/PRO</span>
+              <div className="h-8 w-8 border border-term-accent grid place-items-center">
+                <Terminal size={14} className="text-term-accent" />
+              </div>
+              <div>
+                <div className="font-display text-base font-bold tracking-tight">TERMINAL/PRO</div>
+                <div className="font-mono text-[9px] text-term-muted uppercase tracking-wider">
+                  Enterprise AI Trading Platform
+                </div>
+              </div>
             </div>
 
             <div className="mb-8">
@@ -94,14 +101,14 @@ export default function LoginPage() {
                 Owner sign-in
               </h2>
               <p className="text-term-secondary text-[13px]">
-                Enter credentials to access the trading terminal.
+                Enter your credentials to access the trading terminal.
               </p>
             </div>
 
             <form onSubmit={submit} data-testid={TEST_IDS.login.form} className="space-y-4">
               <div>
                 <label className="font-mono text-[10px] text-term-muted uppercase tracking-wider block mb-1.5">
-                  Username / Email
+                  Username
                 </label>
                 <input
                   data-testid={TEST_IDS.login.username}
@@ -110,7 +117,7 @@ export default function LoginPage() {
                   value={loginId}
                   onChange={(e) => setLoginId(e.target.value)}
                   className="w-full h-10 px-3 bg-term-surface border border-term-border font-mono text-[13px] focus:border-term-accent focus:outline-none"
-                  placeholder="NS4039"
+                  placeholder="Username"
                 />
               </div>
               <div>
@@ -124,7 +131,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full h-10 px-3 bg-term-surface border border-term-border font-mono text-[13px] focus:border-term-accent focus:outline-none"
-                  placeholder="••••••••"
+                  placeholder="Password"
                 />
               </div>
 
@@ -140,7 +147,7 @@ export default function LoginPage() {
               </label>
 
               {err && (
-                <div data-testid={TEST_IDS.login.error} className="border border-term-danger/50 bg-term-danger/5 px-3 py-2 font-mono text-[11px] text-term-danger">
+                <div data-testid={TEST_IDS.login.error} className="border border-term-danger/50 bg-term-danger/5 px-3 py-2 font-mono text-[11px] text-term-danger break-words">
                   ERR // {err}
                 </div>
               )}
@@ -156,8 +163,8 @@ export default function LoginPage() {
               </button>
 
               <div className="pt-6 border-t border-term-border">
-                <div className="font-mono text-[10px] text-term-muted uppercase tracking-wider">
-                  no registration · single-operator platform · brute-force protected
+                <div className="font-mono text-[10px] text-term-muted uppercase tracking-wider leading-relaxed">
+                  no registration · owner-only platform · brute-force protected
                 </div>
               </div>
             </form>

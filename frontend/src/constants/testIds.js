@@ -12,14 +12,17 @@ export const TEST_IDS = {
     topbar: "app-topbar",
     logout: "app-logout",
     navDashboard: "nav-dashboard",
+    navOwnerControl: "nav-owner-control",
     navAI: "nav-ai",
     navBrokers: "nav-brokers",
     navPlugins: "nav-plugins",
     navSettings: "nav-settings",
     navProfile: "nav-profile",
-    navRoles: "nav-roles",
     navLogs: "nav-logs",
     userMenu: "app-user-menu",
+    mobileToggle: "app-mobile-toggle",
+    mobileClose: "app-mobile-close",
+    mobileDrawer: "app-mobile-drawer",
   },
   dashboard: {
     root: "dashboard-root",
@@ -27,6 +30,12 @@ export const TEST_IDS = {
     brokerStatus: "dashboard-broker-status",
     systemStatus: "dashboard-system-status",
     recentLogs: "dashboard-recent-logs",
+  },
+  ownerControl: {
+    root: "owner-control-root",
+    overview: "owner-control-overview",
+    modulesList: "owner-control-modules",
+    capabilities: "owner-control-capabilities",
   },
   ai: {
     root: "ai-root",
@@ -64,9 +73,6 @@ export const TEST_IDS = {
     changePwSubmit: "profile-pw-submit",
     sessions: "profile-sessions",
     logoutAll: "profile-logout-all",
-  },
-  roles: {
-    root: "roles-root",
   },
   logs: {
     root: "logs-root",

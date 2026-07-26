@@ -27,21 +27,21 @@ export default function SettingsPage() {
   const current = store[tab] || {};
 
   return (
-    <div data-testid={TEST_IDS.settings.root} className="p-6 max-w-[1400px]">
+    <div data-testid={TEST_IDS.settings.root} className="p-4 sm:p-6 max-w-[1400px]">
       <div className="mb-6">
         <div className="font-mono text-[10px] text-term-muted uppercase tracking-wider">// settings</div>
-        <h1 className="font-display text-3xl font-bold tracking-tight">System Settings</h1>
+        <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">System Settings</h1>
       </div>
 
-      <div className="grid grid-cols-12 gap-6">
-        <aside className="col-span-3">
-          <div className="border border-term-border bg-term-surface">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+        <aside className="lg:col-span-3">
+          <div className="border border-term-border bg-term-surface flex lg:block overflow-x-auto lg:overflow-visible">
             {TABS.map((t) => (
               <button
                 key={t.id}
                 data-testid={t.tid}
                 onClick={() => setTab(t.id)}
-                className={`w-full text-left h-10 px-4 font-mono text-[11px] uppercase border-l-2 ${
+                className={`text-left h-10 px-4 font-mono text-[11px] uppercase border-l-2 whitespace-nowrap lg:w-full ${
                   tab === t.id
                     ? "bg-term-hover border-term-accent text-term-text"
                     : "border-transparent text-term-secondary hover:text-term-text"
@@ -53,7 +53,7 @@ export default function SettingsPage() {
           </div>
         </aside>
 
-        <section className="col-span-9 border border-term-border bg-term-surface p-6">
+        <section className="lg:col-span-9 border border-term-border bg-term-surface p-4 sm:p-6">
           {tab === "system" && (
             <SysForm current={current} onSave={(v) => save("system", v)} />
           )}

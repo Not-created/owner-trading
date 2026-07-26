@@ -18,10 +18,10 @@ export default function BrokersPage() {
   useEffect(() => { load(); }, []);
 
   return (
-    <div data-testid={TEST_IDS.brokers.root} className="p-6 space-y-6 max-w-[1400px]">
+    <div data-testid={TEST_IDS.brokers.root} className="p-4 sm:p-6 space-y-6 max-w-[1400px]">
       <div>
         <div className="font-mono text-[10px] text-term-muted uppercase tracking-wider">// broker.core</div>
-        <h1 className="font-display text-3xl font-bold tracking-tight">Universal Broker Engine</h1>
+        <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">Universal Broker Engine</h1>
         <p className="text-term-secondary text-[13px] mt-1">
           Plugin framework only. Broker-specific plugins ship in Part 2 (no dummy plugins by policy).
         </p>
@@ -79,7 +79,8 @@ export default function BrokersPage() {
             0 accounts. Install a broker plugin first, then link an account.
           </div>
         ) : (
-          <table data-testid={TEST_IDS.brokers.accountsList} className="w-full text-left">
+          <div className="overflow-x-auto">
+          <table data-testid={TEST_IDS.brokers.accountsList} className="w-full text-left min-w-[640px]">
             <thead className="border-b border-term-border">
               <tr className="font-mono text-[10px] text-term-muted uppercase">
                 <th className="px-4 h-9">Label</th>
@@ -105,6 +106,7 @@ export default function BrokersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
     </div>

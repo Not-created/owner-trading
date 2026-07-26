@@ -8,12 +8,12 @@ import AppShell from "@/components/layout/AppShell";
 
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
+import OwnerControlPage from "@/pages/OwnerControlPage";
 import AIProvidersPage from "@/pages/AIProvidersPage";
 import BrokersPage from "@/pages/BrokersPage";
 import PluginsPage from "@/pages/PluginsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ProfilePage from "@/pages/ProfilePage";
-import RolesPermissionsPage from "@/pages/RolesPermissionsPage";
 import LogsPage from "@/pages/LogsPage";
 
 function Shell({ children }) {
@@ -33,12 +33,14 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Shell><DashboardPage /></Shell>} />
+            <Route path="/owner-control" element={<Shell><OwnerControlPage /></Shell>} />
+            {/* Legacy /roles route redirects into Owner Control */}
+            <Route path="/roles" element={<Navigate to="/owner-control" replace />} />
             <Route path="/ai" element={<Shell><AIProvidersPage /></Shell>} />
             <Route path="/brokers" element={<Shell><BrokersPage /></Shell>} />
             <Route path="/plugins" element={<Shell><PluginsPage /></Shell>} />
             <Route path="/settings" element={<Shell><SettingsPage /></Shell>} />
             <Route path="/profile" element={<Shell><ProfilePage /></Shell>} />
-            <Route path="/roles" element={<Shell><RolesPermissionsPage /></Shell>} />
             <Route path="/logs" element={<Shell><LogsPage /></Shell>} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

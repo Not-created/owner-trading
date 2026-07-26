@@ -60,11 +60,11 @@ export default function AIProvidersPage() {
   };
 
   return (
-    <div data-testid={TEST_IDS.ai.root} className="p-6 space-y-6 max-w-[1400px]">
-      <div className="flex items-baseline justify-between">
+    <div data-testid={TEST_IDS.ai.root} className="p-4 sm:p-6 space-y-6 max-w-[1400px]">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <div>
           <div className="font-mono text-[10px] text-term-muted uppercase tracking-wider">// ai.core</div>
-          <h1 className="font-display text-3xl font-bold tracking-tight">Universal AI Providers</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">Universal AI Providers</h1>
           <p className="text-term-secondary text-[13px] mt-1">Every provider is a plugin. Switch, test, and monitor from one place.</p>
         </div>
         <button data-testid={TEST_IDS.ai.healthBtn} onClick={runHealth} disabled={busy} className="h-9 px-4 border border-term-border font-mono text-[11px] uppercase hover:border-term-accent hover:text-term-accent disabled:opacity-40 flex items-center gap-2">
@@ -72,7 +72,7 @@ export default function AIProvidersPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {providers.map((p) => {
           const h = health[p.provider_id];
           const u = usage.by_provider[p.provider_id];

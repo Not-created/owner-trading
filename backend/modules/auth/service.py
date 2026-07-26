@@ -100,7 +100,7 @@ async def seed_owner() -> None:
             "username_lower": s.owner_username.lower(),
             "email": s.owner_email,
             "password_hash": hash_password(s.owner_password),
-            "role": "super_admin",
+            "role": "owner",
             "profile": {
                 "display_name": "Platform Owner",
                 "avatar_url": None,
@@ -113,11 +113,13 @@ async def seed_owner() -> None:
             "created_at": now,
         })
     else:
+        updates: dict = {}
+        if existing.get("role") != "owner":
+            updates["role"] = "owner"
         if not verify_password(s.owner_password, existing["password_hash"]):
-            await db.users.update_one(
-                {"_id": existing["_id"]},
-                {"$set": {"password_hash": hash_password(s.owner_password)}},
-            )
+            updates["password_hash"] = hash_password(s.owner_password)
+        if updates:
+            await db.users.update_one({"_id": existing["_id"]}, {"$set": updates})
 
 
 def public_user(user: dict) -> dict:

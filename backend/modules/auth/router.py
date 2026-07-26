@@ -38,7 +38,9 @@ class ChangePasswordBody(BaseModel):
 
 @router.post("/login")
 async def login(body: LoginBody, request: Request, response: Response):
-    ip = request.client.host if request.client else "unknown"
+    fwd = request.headers.get("x-forwarded-for", "")
+    real_ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "unknown")
+    ip = real_ip
     identifier = f"{ip}:{body.login.lower()}"
     await svc.check_brute_force(identifier)
 
