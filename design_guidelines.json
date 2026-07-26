@@ -1,0 +1,133 @@
+{
+  "theme": "dark",
+  "design_philosophy": {
+    "archetype": "THE TERMINAL PRO (Swiss & High-Contrast meets Retro-Futurism)",
+    "vibe": "Authoritative, precise, reliable, elite, technical, dense.",
+    "rules": [
+      "No gamified elements. Pure financial-terminal energy.",
+      "Density is key. Use high-density grids for data views, preserving optical alignment.",
+      "Zero AI-slop aesthetics (no purple gradients, no soft blurry blobs).",
+      "Colors must convey function. 95% of UI is monochrome. Accents are strictly for states, alerts, and focal points.",
+      "Hard edges or max 4px border radius. No soft, large rounded corners.",
+      "Borders are visible (1px solid). No heavy dropshadows. Use inner borders to frame content."
+    ]
+  },
+  "colors": {
+    "background": {
+      "base": "#0A0A0C",
+      "surface": "#121214",
+      "surface_hover": "#1C1C1F",
+      "panel": "#050505"
+    },
+    "text": {
+      "primary": "#F4F4F5",
+      "secondary": "#A1A1AA",
+      "muted": "#52525B",
+      "inverse": "#0A0A0C"
+    },
+    "border": {
+      "default": "#27272A",
+      "focus": "#3B82F6",
+      "subtle": "#18181B"
+    },
+    "accents": {
+      "primary": "#007AFF",
+      "primary_hover": "#0056B3",
+      "success": "#00E676",
+      "danger": "#FF3B30",
+      "warning": "#FF8A65",
+      "info": "#3B82F6"
+    }
+  },
+  "typography": {
+    "headings": {
+      "family": "Cabinet Grotesk, sans-serif",
+      "weights": ["500", "700"],
+      "usage": "Page titles, large structural headers"
+    },
+    "body": {
+      "family": "IBM Plex Sans, sans-serif",
+      "weights": ["400", "500"],
+      "usage": "Standard UI text, settings labels, tooltips"
+    },
+    "mono": {
+      "family": "JetBrains Mono, monospace",
+      "weights": ["400", "500", "700"],
+      "usage": "Data tables, financial metrics, logs, API keys, terminal outputs"
+    }
+  },
+  "layouts": {
+    "density": "High Density Grid (For Dashboards/Analytics)",
+    "grid_structure": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4",
+    "gaps": "gap-4",
+    "spacing": "Dense internally (p-3 to p-4 for cards), but with clear optical grouping.",
+    "patterns": {
+      "dashboard_shell": "Left sidebar (fixed, w-64, collapsed state w-16, 1px right border), top bar (h-14, sticky, 1px bottom border) containing health indicators and user menu. Main content area takes remainder.",
+      "data_tables": "Compact row heights (h-8 to h-10). Mono fonts for numbers. Right-aligned numeric columns. Sticky headers.",
+      "settings_pages": "Two-column layout (sidebar nav on left for tabs, scrolling content on right). Max-width container to preserve readability."
+    }
+  },
+  "components": {
+    "surfaces": "Use 'Grid Borders (The Technical Look)'. Container uses border-collapse style layout or 1px subtle borders on cards. No soft drop shadows.",
+    "buttons": "Sharp edges (rounded-sm or rounded-none). Flat backgrounds. High contrast on hover. Small size padding (px-3 py-1.5).",
+    "inputs": "Flat, 1px border. Background slightly darker than surface. Focus ring must be crisp (1px solid primary, no blur).",
+    "cards": "border border-border/40 bg-surface rounded-sm.",
+    "badges": "Pill-style, very subtle background (e.g., bg-success/10 text-success).",
+    "charts": "Shadcn/Recharts. Lines should be crisp (1.5px stroke). No area gradients unless extremely subtle. Axes must use Mono font."
+  },
+  "motion": {
+    "philosophy": "Minimalist, mechanical, instantaneous.",
+    "transitions": "Very fast (100ms - 150ms), ease-out.",
+    "interactions": "Hover states should sharply change background or border color. No floating or scaling effects.",
+    "loaders": "ASCII spinners, sharp skeleton pulses, or minimalist linear progress bars."
+  },
+  "pages_instructions": {
+    "login": "Center standard login box. Single user access (Owner). No 'sign up' link. Include 2FA input if triggered. Background can be a subtle dark abstract grid network.",
+    "dashboard_home": "High density. Top widgets for AI Core status, Active Broker status, System Load. Main area for Quick Actions and Recent Audit Logs.",
+    "ai_providers": "List installed models (OpenAI, Claude, Gemini) in a grid. Show usage bars, latency ms, health checks. Include a config modal to set API keys and default models.",
+    "brokers": "List of installed broker plugins. Show Connect/Disconnect toggles, health status, and primary broker radio buttons. Add account form in a side-drawer or modal.",
+    "plugins": "Data table of installed plugins. Columns: Name, Version, Status (Enabled/Disabled toggle), Actions (Uninstall, Settings).",
+    "settings": "Tabs for System, Security, Appearance (Dark/Light toggle), Notifications. Forms for updating config.",
+    "user_profile": "Read-only/edit forms for Owner details. Sections for active sessions (with 'Revoke' buttons) and Trusted Devices list.",
+    "roles_permissions": "Matrix table. Rows: Permissions, Columns: Roles (Super Admin, Admin, Developer, User). Checkboxes in cells.",
+    "logs_audit": "Terminal-style viewer. Mono font, black background. Search input, level filters (INFO, ERROR, WARN). Color-coded log lines (Green for INFO, Red for ERROR, Yellow for WARN)."
+  },
+  "image_urls": {
+    "login_background": {
+      "url": "https://images.unsplash.com/photo-1644088379091-d574269d422f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzd8MHwxfHNlYXJjaHwyfHxkYXJrJTIwYWJzdHJhY3QlMjBmaW5hbmNlJTIwZ3JpZCUyMG5vZGUlMjBuZXR3b3JrfGVufDB8fHx8MTc4NTA1MDA3MXww&ixlib=rb-4.1.0&q=85",
+      "description": "Dark blue technical network grid lines and dots",
+      "category": "backgrounds"
+    }
+  },
+  "accessibility": {
+    "contrast": "Ensure text meets minimum 4.5:1 ratio. Text over images must have dark overlays.",
+    "focus": "All interactive elements must have visible focus rings (`focus:ring-1 focus:ring-primary focus:outline-none`).",
+    "motion": "Respect `prefers-reduced-motion` for all transitions.",
+    "test_ids": "All interactive and key informational elements MUST include a `data-testid` attribute (e.g., `data-testid='login-submit-button'`)."
+  },
+  "instructions_to_main_agent": [
+    "Install required fonts from Google Fonts: Cabinet Grotesk, IBM Plex Sans, JetBrains Mono.",
+    "Implement a strict dark theme as default. Adjust your Tailwind config to use #0A0A0C for `background` and #121214 for `card`/`popover` backgrounds.",
+    "Use Shadcn components but strip their default borders/shadows to match the 'Terminal Pro' archetype. Set `--radius: 0.125rem;` (2px) in your css variables.",
+    "Never use generic centered layouts for data. Always left-align text, right-align numbers.",
+    "Do not add soft gradients, blur layers behind cards, or AI-slop purple UI. Keep it strict, precise, fintech-grade.",
+    "Implement real data table structures for Logs, Plugins, and Brokers. Use `JetBrains Mono` for ALL numbers, IDs, and statuses.",
+    "Use Lucide icons (already installed) or install Phosphor Icons with sharp, consistent stroke weights.",
+    "Always apply `data-testid` attributes to interactive elements to facilitate automated testing.",
+    "This is a JavaScript project (.js), so ensure all Shadcn components and logic are implemented in pure JS + React, not TypeScript (.tsx)."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Avoid generic, 'on distribution' outputs. Create a distinctive frontend that surprises and delights.",
+    "Do not use dark colors as gradients. Use dark colors independently.",
+    "Do not make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy, but keep borders sharp for this specific terminal theme.",
+    "MUST NOT apply universal transition (e.g. `transition: all`). Add transitions for specific interactive elements excluding transforms.",
+    "MUST NOT center align the app container. Do not add `.App { text-align: center; }`.",
+    "Always use modern button styles. For this theme: sharp edges, distinct interaction states.",
+    "NEVER use AI assistant Emoji characters (🤖🧠💭💡) for icons.",
+    "Every interaction needs micro-animations (hover states, precise transitions).",
+    "Use custom scrollbars (dark, thin, no gutter).",
+    "Use `sonner` for toasts. Located in `/app/frontend/src/components/ui/sonner.js`.",
+    "Use Shadcn calendar for date pickers, Shadcn dropdown-menu instead of `<select>`."
+  ]
+}
