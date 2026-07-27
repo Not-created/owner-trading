@@ -1,0 +1,152 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #0A0A0C;
+  --bg-surface: #121214;
+  --bg-surface-hover: #1C1C1F;
+  --bg-panel: #050505;
+
+  --text-primary: #F4F4F5;
+  --text-secondary: #A1A1AA;
+  --text-muted: #52525B;
+
+  --border-default: #27272A;
+  --border-subtle: #18181B;
+  --border-focus: #3B82F6;
+
+  --accent: #007AFF;
+  --accent-hover: #0056B3;
+  --success: #00E676;
+  --danger: #FF3B30;
+  --warning: #FF8A65;
+  --info: #3B82F6;
+}
+
+@layer base {
+  :root {
+    --background: 240 5% 5%;
+    --foreground: 240 5% 96%;
+    --card: 240 5% 7%;
+    --card-foreground: 240 5% 96%;
+    --popover: 240 5% 5%;
+    --popover-foreground: 240 5% 96%;
+    --primary: 210 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 4% 11%;
+    --secondary-foreground: 240 5% 96%;
+    --muted: 240 4% 11%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 240 4% 12%;
+    --accent-foreground: 240 5% 96%;
+    --destructive: 3 100% 59%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 4% 16%;
+    --input: 240 4% 12%;
+    --ring: 210 100% 50%;
+    --radius: 0.125rem;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html, body, #root {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+body {
+  margin: 0;
+}
+
+.font-display {
+  font-family: "Space Grotesk", "Cabinet Grotesk", sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.font-mono, code, pre {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  font-feature-settings: "zero" 1, "ss01" 1;
+}
+
+/* Grid background pattern */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(39, 39, 42, 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(39, 39, 42, 0.5) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: -1px -1px;
+}
+
+/* Terminal scanlines */
+.scanlines {
+  position: relative;
+}
+.scanlines::before {
+  content: "";
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(255, 255, 255, 0.015) 3px,
+    rgba(255, 255, 255, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #27272A; border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: #3B3B40; }
+
+/* Selection */
+::selection { background: #007AFF; color: #ffffff; }
+
+/* Terminal blink */
+@keyframes term-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.term-cursor::after {
+  content: "▊";
+  color: var(--accent);
+  margin-left: 4px;
+  animation: term-blink 1s steps(1) infinite;
+}
+
+/* Log level colors */
+.log-info { color: #A1A1AA; }
+.log-warning { color: #FF8A65; }
+.log-error { color: #FF3B30; }
+.log-critical { color: #FF3B30; font-weight: 700; }
+.log-debug { color: #52525B; }
+
+/* Focus ring */
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--border-focus);
+}
+
+button, a, input, select, textarea {
+  transition-property: background-color, border-color, color;
+  transition-duration: 120ms;
+  transition-timing-function: ease-out;
+}
