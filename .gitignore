@@ -61,6 +61,10 @@ chainlit.md
 # Deployment
 .vercel
 
+# Emergent deployment metadata
+.emergent/
+.sandbox/
+
 # Data and databases
 agenthub/agents/youtube/db
 

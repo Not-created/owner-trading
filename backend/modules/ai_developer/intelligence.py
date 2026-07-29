@@ -27,6 +27,19 @@ def _iter_source_files():
                 yield f
 
 
+def _module_name_for_path(path: Path) -> str | None:
+    rel = path.relative_to(APP_ROOT).as_posix()
+    if rel.startswith("backend/modules/"):
+        parts = rel.split("/")
+        if len(parts) >= 3:
+            return parts[2]
+    if rel.startswith("backend/core/"):
+        return "core"
+    if rel.startswith("frontend/src/"):
+        return "frontend"
+    return None
+
+
 # ---------- Architecture ----------
 
 def architecture_summary() -> dict:
@@ -98,6 +111,159 @@ def module_graph() -> dict:
                     edges.append({"from": mod, "to": target, "in_file": f.relative_to(APP_ROOT).as_posix()})
     unique = list({(e["from"], e["to"]) for e in edges})
     return {"nodes": module_names, "edges": edges, "unique_dependencies": len(unique)}
+
+
+# ---------- Knowledge graph ----------
+
+def knowledge_graph() -> dict:
+    """Build a structured, reusable graph of modules, files, routes, symbols, and plugins."""
+    nodes_by_id: dict[str, dict] = {}
+    edges: list[dict] = []
+    edge_keys: set[tuple[str, str, str]] = set()
+
+    def add_node(kind: str, name: str, **extra) -> dict:
+        node_id = f"{kind}:{name}"
+        if node_id not in nodes_by_id:
+            node = {"id": node_id, "kind": kind, "name": name}
+            node.update({k: v for k, v in extra.items() if v is not None})
+            nodes_by_id[node_id] = node
+        else:
+            for k, v in extra.items():
+                if v is not None and not nodes_by_id[node_id].get(k):
+                    nodes_by_id[node_id][k] = v
+        return nodes_by_id[node_id]
+
+    def add_edge(from_id: str, to_id: str, kind: str, **extra) -> None:
+        key = (from_id, to_id, kind)
+        if key in edge_keys:
+            return
+        edge = {"from": from_id, "to": to_id, "kind": kind}
+        edge.update({k: v for k, v in extra.items() if v is not None})
+        edges.append(edge)
+        edge_keys.add(key)
+
+    def add_module_node(module_name: str, path: str) -> dict:
+        return add_node("module", module_name, path=path)
+
+    def add_file_node(rel_path: str, module_name: str | None = None) -> dict:
+        return add_node("file", rel_path, path=rel_path, module=module_name)
+
+    module_dirs = [
+        d for d in (APP_ROOT / "backend" / "modules").iterdir()
+        if d.is_dir() and not d.name.startswith("_")
+    ]
+    for module_dir in sorted(module_dirs, key=lambda p: p.name):
+        add_module_node(module_dir.name, module_dir.relative_to(APP_ROOT).as_posix())
+
+    for f in _iter_source_files():
+        rel = f.relative_to(APP_ROOT).as_posix()
+        module_name = _module_name_for_path(f)
+        file_node = add_file_node(rel, module_name)
+        if module_name:
+            module_node = add_module_node(module_name, f"backend/modules/{module_name}" if module_name != "core" else "backend/core")
+            add_edge(module_node["id"], file_node["id"], "contains")
+
+        try:
+            text = f.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+
+        if f.suffix == ".py":
+            try:
+                tree = ast.parse(text)
+            except SyntaxError:
+                tree = None
+
+            if tree is not None:
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.ClassDef):
+                        symbol_node = add_node(
+                            "class",
+                            f"{rel}:{node.name}",
+                            path=rel,
+                            module=module_name,
+                            line=getattr(node, "lineno", None),
+                        )
+                        add_edge(file_node["id"], symbol_node["id"], "contains_symbol")
+
+                        bases = [
+                            getattr(base, "id", None) or getattr(base, "attr", None) or ""
+                            for base in node.bases
+                        ]
+                        base_names = [b for b in bases if b]
+                        if any(name in {"AIProviderBase", "BrokerPluginBase", "MarketDataProvider"} for name in base_names):
+                            plugin_family = "ai_provider" if "AIProviderBase" in base_names else "broker_plugin" if "BrokerPluginBase" in base_names else "market_data_provider"
+                            plugin_node = add_node(
+                                "plugin",
+                                f"{module_name}:{node.name}" if module_name else node.name,
+                                path=rel,
+                                module=module_name,
+                                family=plugin_family,
+                            )
+                            add_edge(file_node["id"], plugin_node["id"], "defines_plugin")
+                            if module_name:
+                                add_edge(module_node["id"], plugin_node["id"], "exposes_plugin")
+                        if any(name == "BaseModel" for name in base_names):
+                            model_node = add_node(
+                                "model",
+                                f"{module_name}:{node.name}" if module_name else node.name,
+                                path=rel,
+                                module=module_name,
+                                family="data_model",
+                            )
+                            add_edge(file_node["id"], model_node["id"], "defines_model")
+                            if module_name:
+                                add_edge(module_node["id"], model_node["id"], "uses_model")
+                    elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        symbol_node = add_node(
+                            "function",
+                            f"{rel}:{node.name}",
+                            path=rel,
+                            module=module_name,
+                            line=getattr(node, "lineno", None),
+                        )
+                        add_edge(file_node["id"], symbol_node["id"], "contains_symbol")
+
+            for match in re.finditer(r"from\s+modules\.([a-z_]+)", text):
+                target_module = match.group(1)
+                if target_module == module_name:
+                    continue
+                target_node = add_module_node(target_module, f"backend/modules/{target_module}")
+                add_edge(module_node["id"], target_node["id"], "import") if module_name else None
+
+            for m, p in re.findall(r'@router\.(get|post|put|patch|delete)\("([^"\"]+)"', text):
+                route_name = f"{m.upper()} {p}"
+                route_node = add_node("route", route_name, path=p, module=module_name)
+                add_edge(file_node["id"], route_node["id"], "defines_route")
+                if module_name:
+                    add_edge(module_node["id"], route_node["id"], "owns_route")
+
+            if module_name:
+                for match in re.finditer(r"from\s+modules\.([a-z_]+)", text):
+                    target_module = match.group(1)
+                    if target_module == module_name:
+                        continue
+                    target_node = add_module_node(target_module, f"backend/modules/{target_module}")
+                    add_edge(module_node["id"], target_node["id"], "import")
+
+    # Add frontend page relationships.
+    fe_root = APP_ROOT / "frontend" / "src"
+    if fe_root.exists():
+        for page in sorted(fe_root.glob("pages/*.js")):
+            rel = page.relative_to(APP_ROOT).as_posix()
+            file_node = add_file_node(rel, "frontend")
+            add_edge(add_module_node("frontend", "frontend/src")["id"], file_node["id"], "contains")
+
+    summary = {
+        "module_count": sum(1 for node in nodes_by_id.values() if node["kind"] == "module"),
+        "file_count": sum(1 for node in nodes_by_id.values() if node["kind"] == "file"),
+        "route_count": sum(1 for node in nodes_by_id.values() if node["kind"] == "route"),
+        "symbol_count": sum(1 for node in nodes_by_id.values() if node["kind"] in {"class", "function"}),
+        "plugin_count": sum(1 for node in nodes_by_id.values() if node["kind"] == "plugin"),
+        "model_count": sum(1 for node in nodes_by_id.values() if node["kind"] == "model"),
+        "dependency_count": sum(1 for edge in edges if edge["kind"] == "import"),
+    }
+    return {"nodes": list(nodes_by_id.values()), "edges": edges, "summary": summary}
 
 
 # ---------- Duplicates ----------
@@ -261,6 +427,7 @@ def full_report() -> dict:
     return {
         "architecture": architecture_summary(),
         "module_graph": module_graph(),
+        "knowledge_graph": knowledge_graph(),
         "duplicates": duplicate_report(),
         "missing": missing_features(),
         "security": security_scan(),

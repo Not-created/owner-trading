@@ -28,7 +28,7 @@ async def intel_arch(user=Depends(get_current_user)):
 @router.get("/intelligence/graph")
 async def intel_graph(user=Depends(get_current_user)):
     _require_owner(user)
-    return intelligence.module_graph()
+    return intelligence.knowledge_graph()
 
 
 @router.get("/intelligence/duplicates")

@@ -7,7 +7,18 @@ import os
 import re
 from pathlib import Path
 
-APP_ROOT = Path("/app")
+
+def _resolve_app_root() -> Path:
+    candidates = [Path("/app")]
+    current = Path(__file__).resolve()
+    candidates.extend(current.parents[:6])
+    for candidate in candidates:
+        if candidate.exists() and (candidate / "backend").exists() and (candidate / "frontend").exists() and (candidate / "memory").exists():
+            return candidate.resolve()
+    return Path("/app")
+
+
+APP_ROOT = _resolve_app_root()
 
 ALLOWED_ROOTS = [
     APP_ROOT / "backend",

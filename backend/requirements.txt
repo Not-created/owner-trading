@@ -19,7 +19,6 @@ distro==1.9.0
 dnspython==2.8.0
 ecdsa==0.19.2
 email-validator==2.3.0
-emergentintegrations==0.2.0
 execnet==2.1.2
 fastapi==0.110.1
 fastuuid==0.14.0
@@ -27,12 +26,10 @@ filelock==3.32.0
 flake8==7.3.0
 frozenlist==1.8.0
 fsspec==2026.6.0
-google-ai-generativelanguage==0.6.15
 google-api-core==2.33.0
 google-api-python-client==2.198.0
 google-auth==2.56.2
 google-auth-httplib2==0.4.0
-google-genai==2.14.0
 google-generativeai==0.8.6
 googleapis-common-protos==1.75.0
 grpcio==1.83.0
@@ -54,7 +51,6 @@ jq==1.12.0
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 librt==0.13.0
-litellm @ https://customer-assets.emergentagent.com/internal-asset/library/litellm-1.80.0-py3-none-any.whl#sha256=adf398c513273de9341f61822296c6b2145f7f2dc4a69daf3ac04829f5bde3f8
 markdown-it-py==4.2.0
 MarkupSafe==3.0.3
 mccabe==0.7.0

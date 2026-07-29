@@ -103,9 +103,13 @@ app.include_router(ai_dev_core_router)
 
 @app.on_event("startup")
 async def _startup():
-    await init_indexes()
-    await seed_owner()
-    bootstrap_broker_plugins()
+    try:
+        await init_indexes()
+        await seed_owner()
+        bootstrap_broker_plugins()
+    except Exception:
+        await log_service.info("system", "Startup bootstrap failed; continuing with degraded mode")
+
     # Take an architecture snapshot on every cold start so Project Memory
     # always has a fresh baseline for the AI Developer Core.
     try:
@@ -113,7 +117,11 @@ async def _startup():
         await devmem.snapshot_architecture(reason="startup")
     except Exception:
         pass
-    await log_service.info("system", "Platform started")
+
+    try:
+        await log_service.info("system", "Platform started")
+    except Exception:
+        pass
 
 
 @app.on_event("shutdown")

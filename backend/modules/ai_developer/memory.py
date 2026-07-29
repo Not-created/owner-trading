@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from core.database import get_db
-from modules.ai_developer.intelligence import architecture_summary, module_graph
+from modules.ai_developer.intelligence import architecture_summary, module_graph, knowledge_graph
 
 
 def _now() -> str:
@@ -24,6 +24,7 @@ async def snapshot_architecture(reason: str = "") -> dict:
         "reason": reason,
         "architecture": architecture_summary(),
         "module_graph": module_graph(),
+        "knowledge_graph": knowledge_graph(),
         "created_at": _now(),
     }
     await get_db().dev_architecture.insert_one(doc)

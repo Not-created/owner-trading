@@ -1,7 +1,7 @@
 """Enterprise AI Trading Platform - Backend regression tests."""
 import os, time, pytest, requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://ai-broker-core.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "http://localhost:8000").rstrip("/")
 API = f"{BASE_URL}/api"
 USER = "NS4039"
 PWD = "40394039"
