@@ -5,6 +5,7 @@ Never hardcode secrets — all pulled from .env.
 """
 import os
 from functools import lru_cache
+from typing import Optional
 from pydantic import BaseModel
 
 
@@ -31,9 +32,9 @@ class Settings(BaseModel):
     frontend_url: str
 
     # LLM
-    openai_api_key: str | None = None
-    anthropic_api_key: str | None = None
-    google_api_key: str | None = None
+    openai_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
+    google_api_key: Optional[str] = None
 
     # Brute-force
     max_failed_attempts: int = 5
@@ -51,7 +52,7 @@ def get_settings() -> Settings:
         owner_email=os.environ["OWNER_EMAIL"],
         encryption_key=os.environ["ENCRYPTION_KEY"],
         frontend_url=os.environ["FRONTEND_URL"],
-        openai_api_key=os.environ.get("OPENAI_API_KEY"),
-        anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY"),
-        google_api_key=os.environ.get("GOOGLE_API_KEY"),
+        openai_api_key=os.environ.get("OPENAI_API_KEY", ""),
+        anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY", ""),
+        google_api_key=os.environ.get("GOOGLE_API_KEY", ""),
     )

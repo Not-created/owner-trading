@@ -2,6 +2,7 @@
 Global error handling + typed error codes.
 Never leaks sensitive information.
 """
+from typing import Optional
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -22,7 +23,7 @@ ERROR_CODES = {
 
 
 class AppError(Exception):
-    def __init__(self, code: str, status: int = 400, detail: str | None = None):
+    def __init__(self, code: str, status: int = 400, detail: Optional[str] = None):
         self.code = code
         self.status = status
         self.detail = detail or ERROR_CODES.get(code, "Error")
