@@ -1,11 +1,13 @@
 """
+from typing import Optional
+
 Database Service — Motor (async MongoDB).
 Provides a singleton client, database handle and index initialization.
 """
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from core.config import get_settings
 
-_client: AsyncIOMotorClient | None = None
+_client: Optional[AsyncIOMotorClient] = None
 _db: AsyncIOMotorDatabase | None = None
 
 
