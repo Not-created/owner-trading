@@ -16,6 +16,9 @@ import SettingsPage from "@/pages/SettingsPage";
 import ProfilePage from "@/pages/ProfilePage";
 import RolesPermissionsPage from "@/pages/RolesPermissionsPage";
 import LogsPage from "@/pages/LogsPage";
+import OrdersPage from "@/pages/OrdersPage";
+import PositionsPage from "@/pages/PositionsPage";
+import StrategiesPage from "@/pages/StrategiesPage";
 
 function Shell({ children }) {
   return (
@@ -37,6 +40,9 @@ export default function App() {
             <Route path="/owner-control" element={<Shell><OwnerControlPage /></Shell>} />
             <Route path="/ai" element={<Shell><AIProvidersPage /></Shell>} />
             <Route path="/brokers" element={<Shell><BrokersPage /></Shell>} />
+            <Route path="/orders" element={<Shell><OrdersPage /></Shell>} />
+            <Route path="/positions" element={<Shell><PositionsPage /></Shell>} />
+            <Route path="/strategies" element={<Shell><StrategiesPage /></Shell>} />
             <Route path="/plugins" element={<Shell><PluginsPage /></Shell>} />
             <Route path="/settings" element={<Shell><SettingsPage /></Shell>} />
             <Route path="/profile" element={<Shell><ProfilePage /></Shell>} />

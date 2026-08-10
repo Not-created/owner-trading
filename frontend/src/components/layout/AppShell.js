@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Cpu, Network, Puzzle, Settings, User, Shield, Terminal, Power,
-  CircleDot, Menu, X, Command,
+  CircleDot, Menu, X, Command, ArrowUpRight, Server,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,6 +14,9 @@ const NAV = [
   { to: "/owner-control", label: "Owner Control", icon: Command, tid: TEST_IDS.shell.navOwnerControl },
   { to: "/ai", label: "AI Core", icon: Cpu, tid: TEST_IDS.shell.navAI },
   { to: "/brokers", label: "Brokers", icon: Network, tid: TEST_IDS.shell.navBrokers },
+  { to: "/orders", label: "Orders", icon: ArrowUpRight, tid: TEST_IDS.shell.navOrders },
+  { to: "/positions", label: "Positions", icon: Server, tid: TEST_IDS.shell.navPositions },
+  { to: "/strategies", label: "Strategies", icon: Puzzle, tid: TEST_IDS.shell.navStrategies },
   { to: "/plugins", label: "Plugins", icon: Puzzle, tid: TEST_IDS.shell.navPlugins },
   { to: "/roles", label: "Roles", icon: Shield, tid: TEST_IDS.shell.navRoles },
   { to: "/logs", label: "Audit Logs", icon: Terminal, tid: TEST_IDS.shell.navLogs },

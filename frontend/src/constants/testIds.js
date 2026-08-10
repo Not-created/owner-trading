@@ -18,6 +18,9 @@ export const TEST_IDS = {
     navRoles: "nav-roles",
     navAI: "nav-ai",
     navBrokers: "nav-brokers",
+    navOrders: "nav-orders",
+    navPositions: "nav-positions",
+    navStrategies: "nav-strategies",
     navPlugins: "nav-plugins",
     navSettings: "nav-settings",
     navProfile: "nav-profile",
@@ -110,5 +113,14 @@ export const TEST_IDS = {
     search: "logs-search",
     filterLevel: "logs-filter-level",
     filterCategory: "logs-filter-category",
+  },
+  orders: {
+    root: "orders-root",
+  },
+  positions: {
+    root: "positions-root",
+  },
+  strategies: {
+    root: "strategies-root",
   },
 };
