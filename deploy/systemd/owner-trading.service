@@ -1,0 +1,15 @@
+[Unit]
+Description=Owner Trading backend (Uvicorn)
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/owner-trading/backend
+Environment="PATH=/home/ubuntu/owner-trading/.venv/bin"
+ExecStart=/home/ubuntu/owner-trading/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8000 --workers 1
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
