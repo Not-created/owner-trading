@@ -31,9 +31,22 @@ dist/
 dist
 
 # Environment files (comprehensive coverage)
+# CRITICAL: Never commit .env files or secrets
+.env
+.env.*
+backend/.env
+frontend/.env
+.env.local
+.env.*.local
+*.env
 
+# Secrets and credentials
 *token.json*
 *credentials.json*
+*secret*
+*.key
+*.private
+*.pem
 
 # Logs and debug files
 npm-debug.log*
