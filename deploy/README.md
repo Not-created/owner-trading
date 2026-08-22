@@ -6,6 +6,35 @@ This folder contains deployment artifacts and instructions for deploying the Own
 
 ---
 
+## Automated Deployment (Recommended)
+
+An idempotent deployment script is provided at `deploy/deploy.sh`. It automates the manual steps below and is safe to run on a fresh server, an already-deployed server, or after a failed deployment.
+
+```bash
+# From the repository root on the server
+sudo bash deploy/deploy.sh
+```
+
+Options:
+
+- `--skip-os-packages` — skip `apt-get install` (for fast re-runs)
+- `--skip-frontend` — skip frontend install/build (backend-only updates)
+- `--help` — show usage
+
+The script:
+
+- Installs OS packages, Node 20 LTS (if missing), and Yarn (the authoritative package manager — `package.json` declares `yarn@1.22.22`).
+- Creates the Python venv and installs `backend/requirements.txt`.
+- Creates `backend/.env` **only if missing** (never overwrites existing secrets) with auto-generated `JWT_SECRET` and `ENCRYPTION_KEY`.
+- Builds the frontend with `yarn install --frozen-lockfile && yarn build`.
+- Installs the Nginx server block and systemd unit, **backing up** any existing config first and **restoring it if validation fails**.
+- Runs post-deployment health checks (backend, MongoDB connectivity, Nginx, systemd, localhost API, public HTTP, correct `127.0.0.1:8000` binding, auth guard).
+- Never installs/resets MongoDB, never deletes data, and never adds broker-specific code.
+
+> **Note on secrets location:** The backend currently loads `backend/.env` (see `backend/server.py` → `load_dotenv(ROOT_DIR / ".env")`). The future production secret location is `/etc/owner-trading/owner-trading.env`. The script uses a `SECRETS_FILE` variable (default `backend/.env`) so it can be pointed at the future location without changes.
+
+---
+
 ## Prerequisites
 
 ### System Requirements
@@ -170,12 +199,12 @@ curl http://127.0.0.1:8000/api/health
 ### 3.1 - Install Node.js
 
 ```bash
-# Install Node.js (LTS version recommended)
+# Install Node.js (LTS version recommended — Node 20 LTS for React 19 + Craco 7.1.0)
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # Verify installation
-node --version  # Should be 14.0+
+node --version  # Should be 20.x (LTS)
 npm --version
 ```
 
@@ -184,8 +213,9 @@ npm --version
 ```bash
 cd /home/ubuntu/owner-trading/frontend
 
-# Install dependencies
-npm ci
+# Install dependencies (Yarn is the authoritative package manager —
+# package.json declares "packageManager": "yarn@1.22.22" and yarn.lock is present)
+yarn install --frozen-lockfile
 
 # Verify .env is configured correctly
 # IMPORTANT: frontend/.env must have REACT_APP_BACKEND_URL empty or unset
@@ -193,7 +223,7 @@ npm ci
 cat .env
 
 # Build production bundle
-npm run build
+yarn build
 
 # Verify build succeeded
 ls -lh build/index.html
@@ -426,7 +456,7 @@ ls -la /home/ubuntu/owner-trading/frontend/build/index.html
 
 # Rebuild if needed
 cd /home/ubuntu/owner-trading/frontend
-npm run build
+yarn build
 sudo systemctl reload nginx
 ```
 

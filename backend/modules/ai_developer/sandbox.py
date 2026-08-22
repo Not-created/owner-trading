@@ -1,8 +1,8 @@
 """
 Sandbox Engine.
 Materialises a proposed change set into an isolated workspace under
-`/app/.sandbox/{task_id}/` and runs the validator against it. The production
-project is never touched.
+`<APP_ROOT>/.sandbox/{task_id}/` and runs the validator against it. The
+production project is never touched.
 
 The sandbox is a *thin* copy: only the files referenced by the change set
 (plus critical roots like backend/, memory/) are hard-linked or copied.
@@ -15,7 +15,9 @@ from modules.ai_developer.inspector import APP_ROOT, ALLOWED_ROOTS, _resolve
 from modules.ai_developer import validator
 
 
-SANDBOX_ROOT = Path("/app/.sandbox")
+# Sandbox lives under the resolved project root (not a hardcoded /app) so it
+# works on a VPS at /home/ubuntu/owner-trading as well as in a container.
+SANDBOX_ROOT = APP_ROOT / ".sandbox"
 
 
 def _new_id() -> str:
