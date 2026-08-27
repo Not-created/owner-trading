@@ -52,3 +52,13 @@ async def connect(account_id: str, user=Depends(get_current_user)):
 async def disconnect(account_id: str, user=Depends(get_current_user)):
     await svc.disconnect_account(str(user["_id"]), account_id)
     return {"ok": True}
+
+
+@router.post("/accounts/{account_id}/test")
+async def test_connection(account_id: str, user=Depends(get_current_user)):
+    return await svc.test_connection(str(user["_id"]), account_id)
+
+
+@router.get("/accounts/{account_id}/info")
+async def account_info(account_id: str, user=Depends(get_current_user)):
+    return await svc.get_account_info(str(user["_id"]), account_id)

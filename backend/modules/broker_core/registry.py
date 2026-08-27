@@ -22,5 +22,18 @@ class BrokerRegistry:
     def all(self) -> list[BrokerPluginBase]:
         return list(self._plugins.values())
 
+    def list_safe(self) -> list[dict]:
+        out = []
+        for p in self._plugins.values():
+            out.append({
+                "plugin_id": p.plugin_id,
+                "display_name": p.display_name,
+                "version": p.version,
+                "category": getattr(p, "category", ""),
+                "required_credentials": p.required_credentials,
+                "credential_labels": getattr(p, "credential_labels", {}),
+            })
+        return out
+
 
 broker_registry = BrokerRegistry()

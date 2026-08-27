@@ -12,15 +12,7 @@ from modules.broker_core.registry import broker_registry
 
 
 async def list_plugins() -> list[dict]:
-    return [
-        {
-            "plugin_id": p.plugin_id,
-            "display_name": p.display_name,
-            "version": p.version,
-            "required_credentials": p.required_credentials,
-        }
-        for p in broker_registry.all()
-    ]
+    return broker_registry.list_safe()
 
 
 async def list_accounts(user_id: str) -> list[dict]:
@@ -113,3 +105,32 @@ async def disconnect_account(user_id: str, account_id: str) -> None:
         except Exception:
             pass
     await db.broker_accounts.update_one({"account_id": account_id}, {"$set": {"status": "disconnected"}})
+
+
+async def test_connection(user_id: str, account_id: str) -> dict:
+    db = get_db()
+    acc = await db.broker_accounts.find_one({"user_id": user_id, "account_id": account_id})
+    if not acc:
+        raise AppError("NOT_FOUND", status=404)
+    plugin = broker_registry.get(acc["plugin_id"])
+    if not plugin:
+        raise AppError("NOT_FOUND", status=404, detail="Plugin no longer installed")
+    enc = get_encryption()
+    creds = {k: enc.decrypt(v) for k, v in acc.get("credentials_encrypted", {}).items()}
+    health = await plugin.connect(creds)
+    return {"ok": health.ok, "detail": health.detail, "latency_ms": health.latency_ms}
+
+
+async def get_account_info(user_id: str, account_id: str) -> dict:
+    db = get_db()
+    acc = await db.broker_accounts.find_one({"user_id": user_id, "account_id": account_id})
+    if not acc:
+        raise AppError("NOT_FOUND", status=404)
+    plugin = broker_registry.get(acc["plugin_id"])
+    if not plugin:
+        raise AppError("NOT_FOUND", status=404, detail="Plugin no longer installed")
+    enc = get_encryption()
+    creds = {k: enc.decrypt(v) for k, v in acc.get("credentials_encrypted", {}).items()}
+    info = await plugin.account_info(creds)
+    safe = {k: v for k, v in info.items() if k not in ("password", "secret", "token", "api_secret", "api_key")}
+    return safe
