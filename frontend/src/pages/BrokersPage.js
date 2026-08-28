@@ -1627,4 +1627,448 @@ function AddAccountModal({
     </div>
   );
                 }
+
+                      <td className="px-4 h-11">
+                        {account.last_health ? (
+                          <div>
+                            <div
+                              className={`font-mono text-[10px] ${
+                                account.last_health.ok
+                                  ? "text-term-success"
+                                  : "text-term-danger"
+                              }`}
+                            >
+                              {account.last_health.ok
+                                ? "OK"
+                                : "ERROR"}
+                              {" · "}
+                              {account.last_health.latency_ms ?? 0}ms
+                            </div>
+
+                            {account.last_health.detail && (
+                              <div className="font-mono text-[9px] text-term-muted mt-0.5 max-w-[220px] truncate">
+                                {account.last_health.detail}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="font-mono text-[10px] text-term-muted">
+                            —
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="px-4 h-11">
+                        {account.is_primary ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 border border-term-success/40 text-term-success font-mono text-[9px] uppercase">
+                            <Check size={9} />
+                            YES
+                          </span>
+                        ) : (
+                          <button
+                            data-testid={BROKER_TEST_IDS.primary(
+                              account.account_id
+                            )}
+                            onClick={() => doPrimary(account)}
+                            disabled={makingPrimary}
+                            className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase text-term-secondary hover:border-term-accent hover:text-term-accent disabled:opacity-40"
+                          >
+                            {makingPrimary ? (
+                              <Loader2
+                                size={10}
+                                className="animate-spin"
+                              />
+                            ) : (
+                              "set primary"
+                            )}
+                          </button>
+                        )}
+                      </td>
+
+                      <td className="px-4 h-11">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {account.status === "connected" ? (
+                            <button
+                              data-testid={BROKER_TEST_IDS.disconnect(
+                                account.account_id
+                              )}
+                              onClick={() => doDisconnect(account)}
+                              disabled={disconnecting}
+                              className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-warning hover:text-term-warning disabled:opacity-40 flex items-center gap-1"
+                              title="Disconnect broker"
+                            >
+                              {disconnecting ? (
+                                <Loader2
+                                  size={10}
+                                  className="animate-spin"
+                                />
+                              ) : (
+                                <Radio size={10} />
+                              )}
+                              disconnect
+                            </button>
+                          ) : (
+                            <button
+                              data-testid={BROKER_TEST_IDS.connect(
+                                account.account_id
+                              )}
+                              onClick={() => doConnect(account)}
+                              disabled={connecting}
+                              className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-success hover:text-term-success disabled:opacity-40 flex items-center gap-1"
+                              title="Connect broker"
+                            >
+                              {connecting ? (
+                                <Loader2
+                                  size={10}
+                                  className="animate-spin"
+                                />
+                              ) : (
+                                <Wifi size={10} />
+                              )}
+                              connect
+                            </button>
+                          )}
+
+                          <button
+                            data-testid={BROKER_TEST_IDS.test(
+                              account.account_id
+                            )}
+                            onClick={() => doTest(account)}
+                            disabled={testing}
+                            className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-accent hover:text-term-accent disabled:opacity-40 flex items-center gap-1"
+                            title="Test broker connection"
+                          >
+                            {testing ? (
+                              <Loader2
+                                size={10}
+                                className="animate-spin"
+                              />
+                            ) : (
+                              <Zap size={10} />
+                            )}
+                            test
+                          </button>
+
+                          <button
+                            data-testid={BROKER_TEST_IDS.info(
+                              account.account_id
+                            )}
+                            onClick={() => doInfo(account)}
+                            className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-accent hover:text-term-accent flex items-center gap-1"
+                            title="Account information"
+                          >
+                            <Info size={10} />
+                            info
+                          </button>
+
+                          <button
+                            data-testid={BROKER_TEST_IDS.remove(
+                              account.account_id
+                            )}
+                            onClick={() => doRemove(account)}
+                            disabled={removing}
+                            className="h-7 w-7 border border-term-border font-mono text-[9px] hover:border-term-danger hover:text-term-danger disabled:opacity-40 flex items-center justify-center"
+                            title="Remove broker account"
+                          >
+                            {removing ? (
+                              <Loader2
+                                size={10}
+                                className="animate-spin"
+                              />
+                            ) : (
+                              <Trash2 size={10} />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {accounts.length > 0 && (
+          <div className="px-4 py-3 border-t border-term-border flex flex-wrap items-center gap-4">
+            <span className="font-mono text-[9px] text-term-muted uppercase">
+              status legend
+            </span>
+
+            <span className="font-mono text-[9px] text-term-success flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-term-success inline-block" />
+              connected
+            </span>
+
+            <span className="font-mono text-[9px] text-term-muted flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-term-muted inline-block" />
+              disconnected
+            </span>
+
+            <span className="font-mono text-[9px] text-term-danger flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-term-danger inline-block" />
+              error
+            </span>
+          </div>
+        )}
+      </section>
+
+      {/* ------------------------------------------------------------ */}
+      {/* Account information                                         */}
+      {/* ------------------------------------------------------------ */}
+
+      {infoAccount && (
+        <section
+          data-testid={BROKER_TEST_IDS.infoPanel}
+          className="border border-term-border bg-term-surface"
+        >
+          <header className="min-h-10 px-4 py-2 flex items-center justify-between border-b border-term-border">
+            <div>
+              <div className="font-mono text-[9px] text-term-muted uppercase tracking-wider">
+                broker.account_info
+              </div>
+
+              <div className="font-display text-[13px] font-bold">
+                Account Info — {infoAccount.label || "Unnamed account"}
+              </div>
+
+              <div className="font-mono text-[9px] text-term-muted mt-0.5">
+                {infoAccount.plugin_id}
+              </div>
+            </div>
+
+            <button
+              data-testid={BROKER_TEST_IDS.infoClose}
+              onClick={closeInfo}
+              className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-accent hover:text-term-accent flex items-center gap-1"
+            >
+              <X size={10} />
+              close
+            </button>
+          </header>
+
+          <div className="p-4">
+            {infoLoading ? (
+              <div className="flex items-center gap-2 font-mono text-[10px] text-term-muted">
+                <Loader2
+                  size={12}
+                  className="animate-spin"
+                />
+                loading account information...
+              </div>
+            ) : infoData ? (
+              <div className="space-y-3">
+                <pre className="border border-term-border/60 bg-term-panel p-4 overflow-x-auto font-mono text-[10px] leading-5 text-term-secondary whitespace-pre-wrap break-words">
+                  {JSON.stringify(
+                    redactSensitiveInfo(infoData),
+                    null,
+                    2
+                  )}
+                </pre>
+
+                <div className="font-mono text-[9px] text-term-muted flex items-center gap-1">
+                  <ShieldCheck size={10} />
+                  Credentials are encrypted and are never displayed here.
+                </div>
+              </div>
+            ) : (
+              <div className="font-mono text-[10px] text-term-muted">
+                No account information returned.
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ------------------------------------------------------------ */}
+      {/* Add account modal                                            */}
+      {/* ------------------------------------------------------------ */}
+
+      {modalPlugin && (
+        <AddAccountModal
+          plugin={modalPlugin}
+          onClose={() => setModalPlugin(null)}
+          onCreated={async () => {
+            setModalPlugin(null);
+            await load(true);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Summary cell                                                       */
+/* ------------------------------------------------------------------ */
+
+function SummaryCell({
+  label,
+  value,
+  detail,
+  valueClassName = "",
+}) {
+  return (
+    <div className="border border-term-border bg-term-surface p-4">
+      <div className="font-mono text-[9px] text-term-muted uppercase tracking-wider">
+        {label}
+      </div>
+
+      <div
+        className={`font-display text-xl font-bold mt-1 truncate ${valueClassName}`}
+      >
+        {value}
+      </div>
+
+      <div className="font-mono text-[9px] text-term-muted mt-1 truncate">
+        {detail}
+      </div>
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Broker group                                                       */
+/* ------------------------------------------------------------------ */
+
+function BrokerGroup({
+  title,
+  plugins,
+  onAdd,
+}) {
+  return (
+    <div>
+      <div className="font-mono text-[10px] text-term-muted uppercase tracking-wider mb-2">
+        {title}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {plugins.map((plugin) => (
+          <BrokerCard
+            key={plugin.plugin_id}
+            plugin={plugin}
+            onAdd={onAdd}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Broker card                                                        */
+/* ------------------------------------------------------------------ */
+
+function BrokerCard({
+  plugin,
+  onAdd,
+}) {
+  const meta =
+    CATEGORY_META[plugin.category] ||
+    DEFAULT_CATEGORY;
+
+  const CategoryIcon = meta.icon;
+
+  const credentials =
+    Array.isArray(
+      plugin.required_credentials
+    )
+      ? plugin.required_credentials
+      : [];
+
+  return (
+    <div className="border border-term-border/60 bg-term-panel p-4 hover:border-term-border transition-colors">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-display text-[15px] font-bold truncate">
+            {plugin.display_name ||
+              plugin.plugin_id}
+          </div>
+
+          <div className="font-mono text-[9px] text-term-muted mt-1 truncate">
+            {plugin.plugin_id}
+            {" · "}
+            v{plugin.version || "—"}
+          </div>
+        </div>
+
+        <span
+          className={`shrink-0 font-mono text-[8px] uppercase flex items-center gap-1 ${meta.className}`}
+        >
+          <CategoryIcon size={10} />
+          {meta.label}
+        </span>
+      </div>
+
+      <div className="mt-4 pt-3 border-t border-term-border/50 flex items-center justify-between gap-3">
+        <span className="font-mono text-[9px] text-term-muted">
+          {credentials.length} credential
+          {credentials.length === 1 ? "" : "s"}
+        </span>
+
+        <button
+          data-testid={BROKER_TEST_IDS.addButton(
+            plugin.plugin_id
+          )}
+          onClick={() => onAdd(plugin)}
+          className="h-8 px-3 border border-term-border font-mono text-[9px] uppercase hover:border-term-accent hover:text-term-accent flex items-center gap-1.5"
+        >
+          <Plus size={10} />
+          add account
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Sensitive info redaction                                           */
+/* ------------------------------------------------------------------ */
+
+function redactSensitiveInfo(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      redactSensitiveInfo(item)
+    );
+  }
+
+  if (
+    value !== null &&
+    typeof value === "object"
+  ) {
+    const output = {};
+
+    Object.entries(value).forEach(
+      ([key, item]) => {
+        const normalized =
+          String(key).toLowerCase();
+
+        if (
+          normalized.includes("password") ||
+          normalized.includes("secret") ||
+          normalized.includes("token") ||
+          normalized.includes("api_key") ||
+          normalized.includes("apikey") ||
+          normalized.includes("mpin") ||
+          normalized.includes("totp") ||
+          normalized.includes("authorization") ||
+          normalized.includes("credential")
+        ) {
+          output[key] = "[REDACTED]";
+        } else {
+          output[key] =
+            redactSensitiveInfo(item);
+        }
+      }
+    );
+
+    return output;
+  }
+
+  return value;
+                  }
   
