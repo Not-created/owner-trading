@@ -1022,6 +1022,180 @@ function BrokerGroup({
 /* Broker card                                                         */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/* Broker card                                                         */
+/* ------------------------------------------------------------------ */
+
+function BrokerGroup({
+  title,
+  plugins,
+  onAdd,
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <div className="font-mono text-[10px] text-term-muted uppercase tracking-wider">
+          {title}
+        </div>
+
+        <div className="h-px bg-term-border flex-1" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {plugins.map((plugin) => (
+          <BrokerCard
+            key={plugin.plugin_id}
+            plugin={plugin}
+            onAdd={onAdd}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
 function BrokerCard({
   plugin,
   onAdd,
+}) {
+  const category =
+    CATEGORY_META[plugin.category] ||
+    DEFAULT_CATEGORY;
+
+  const CategoryIcon = category.icon;
+
+  const credentialCount = Array.isArray(
+    plugin.required_credentials
+  )
+    ? plugin.required_credentials.length
+    : 0;
+
+  return (
+    <div className="border border-term-border bg-term-panel p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <CategoryIcon
+              size={13}
+              className={category.className}
+            />
+
+            <div className="font-display text-[13px] font-bold truncate">
+              {plugin.display_name ||
+                plugin.plugin_id}
+            </div>
+          </div>
+
+          <div className="font-mono text-[9px] text-term-muted mt-1 truncate">
+            {plugin.plugin_id}
+          </div>
+        </div>
+
+        <span
+          className={`font-mono text-[9px] uppercase shrink-0 ${category.className}`}
+        >
+          {category.label}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 mt-4">
+        <div className="border border-term-border/60 px-2 py-2">
+          <div className="font-mono text-[8px] text-term-muted uppercase">
+            version
+          </div>
+
+          <div className="font-mono text-[10px] text-term-text mt-0.5">
+            {plugin.version || "—"}
+          </div>
+        </div>
+
+        <div className="border border-term-border/60 px-2 py-2">
+          <div className="font-mono text-[8px] text-term-muted uppercase">
+            credentials
+          </div>
+
+          <div className="font-mono text-[10px] text-term-text mt-0.5">
+            {credentialCount}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <div className="font-mono text-[8px] text-term-muted uppercase mb-1">
+          required fields
+        </div>
+
+        {credentialCount === 0 ? (
+          <div className="font-mono text-[9px] text-term-muted">
+            No credentials required
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-1">
+            {plugin.required_credentials.map(
+              (key) => (
+                <span
+                  key={key}
+                  className="border border-term-border/60 px-1.5 py-0.5 font-mono text-[8px] text-term-secondary"
+                >
+                  {plugin.credential_labels?.[
+                    key
+                  ] || key}
+                </span>
+              )
+            )}
+          </div>
+        )}
+      </div>
+
+      <button
+        data-testid={BROKER_TEST_IDS.addButton(
+          plugin.plugin_id
+        )}
+        onClick={() => onAdd(plugin)}
+        className="mt-4 w-full h-8 border border-term-border font-mono text-[10px] uppercase hover:border-term-accent hover:text-term-accent flex items-center justify-center gap-2"
+      >
+        <Plus size={11} />
+        add account
+      </button>
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Summary cell                                                        */
+/* ------------------------------------------------------------------ */
+
+function SummaryCell({
+  label,
+  value,
+  detail,
+  valueClassName = "",
+}) {
+  return (
+    <div className="border border-term-border bg-term-surface p-4">
+      <div className="font-mono text-[9px] text-term-muted uppercase tracking-wider">
+        {label}
+      </div>
+
+      <div
+        className={`font-display text-xl font-bold mt-1 truncate ${valueClassName}`}
+      >
+        {value}
+      </div>
+
+      <div className="font-mono text-[9px] text-term-secondary mt-1 truncate">
+        {detail}
+      </div>
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Add account modal                                                   */
+/* ------------------------------------------------------------------ */
+
+
+  
