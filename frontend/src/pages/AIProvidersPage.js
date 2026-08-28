@@ -714,3 +714,830 @@ export default function AIProvidersPage() {
           </div>
         )}
       </section>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Summary card                                                       */
+/* ------------------------------------------------------------------ */
+
+function SummaryCard({
+  label,
+  value,
+  icon,
+  tone = "default",
+  compact = false,
+}) {
+  const toneClass =
+    tone === "success"
+      ? "text-term-success"
+      : "text-term-text";
+
+  return (
+    <div className="border border-term-border bg-term-surface p-3 min-h-[78px]">
+      <div className="flex items-center gap-2">
+        <span className="text-term-muted">
+          {icon}
+        </span>
+
+        <span className="font-mono text-[9px] text-term-muted uppercase tracking-wider">
+          {label}
+        </span>
+      </div>
+
+      <div
+        className={`font-mono mt-2 leading-none ${toneClass} ${
+          compact
+            ? "text-[13px] truncate"
+            : "text-xl"
+        }`}
+        title={formatValue(value)}
+      >
+        {formatValue(value)}
+      </div>
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Provider card                                                      */
+/* ------------------------------------------------------------------ */
+
+function ProviderCard({
+  provider,
+  providerHealth,
+  providerUsage,
+  isDefault,
+  selectedModel,
+  models,
+  busy,
+  onSetDefault,
+}) {
+  const providerId =
+    provider.provider_id;
+
+  const displayName =
+    provider.display_name ||
+    provider.name ||
+    providerId;
+
+  const healthy =
+    providerHealth?.ok === true;
+
+  const modelOptions =
+    models.length > 0
+      ? models
+      : selectedModel
+        ? [selectedModel]
+        : [];
+
+  const [model, setModel] =
+    useState(selectedModel || "");
+
+  useEffect(() => {
+    setModel(
+      selectedModel || ""
+    );
+  }, [selectedModel]);
+
+
+  const usageCount =
+    Number(
+      providerUsage?.requests ??
+      providerUsage?.total_requests ??
+      0
+    ) || 0;
+
+
+  const chooseDefault = () => {
+    if (
+      !providerId ||
+      !model ||
+      busy
+    ) {
+      return;
+    }
+
+    onSetDefault(
+      providerId,
+      model
+    );
+  };
+
+
+  return (
+    <article
+      className={`border bg-term-surface ${
+        isDefault
+          ? "border-term-accent"
+          : "border-term-border"
+      }`}
+    >
+      {/* ---------------------------------------------------------- */}
+      {/* Provider header                                            */}
+      {/* ---------------------------------------------------------- */}
+
+      <header className="p-4 border-b border-term-border">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="font-display text-[15px] font-bold truncate">
+              {displayName}
+            </div>
+
+            <div className="font-mono text-[9px] text-term-muted uppercase mt-1 truncate">
+              {providerId}
+            </div>
+          </div>
+
+          <div className="shrink-0">
+            {providerHealth ? (
+              <span
+                className={`font-mono text-[9px] uppercase ${
+                  healthy
+                    ? "text-term-success"
+                    : "text-term-danger"
+                }`}
+              >
+                ●{" "}
+                {healthy
+                  ? "healthy"
+                  : "error"}
+              </span>
+            ) : (
+              <span className="font-mono text-[9px] text-term-muted uppercase">
+                ● unchecked
+              </span>
+            )}
+          </div>
+        </div>
+
+
+        {provider.description && (
+          <p className="text-term-secondary text-[11px] mt-3 leading-relaxed">
+            {provider.description}
+          </p>
+        )}
+      </header>
+
+
+      {/* ---------------------------------------------------------- */}
+      {/* Provider metadata                                           */}
+      {/* ---------------------------------------------------------- */}
+
+      <div className="p-4 space-y-3">
+        <div className="grid grid-cols-2 gap-2">
+          <MetaItem
+            label="version"
+            value={
+              provider.version ||
+              "—"
+            }
+          />
+
+          <MetaItem
+            label="requests"
+            value={usageCount}
+          />
+        </div>
+
+
+        {/* -------------------------------------------------------- */}
+        {/* Model selector                                           */}
+        {/* -------------------------------------------------------- */}
+
+        <div>
+          <label className="font-mono text-[9px] text-term-muted uppercase tracking-wider block mb-1">
+            Model
+          </label>
+
+          {modelOptions.length > 0 ? (
+            <select
+              value={model}
+              onChange={(event) =>
+                setModel(
+                  event.target.value
+                )
+              }
+              className="w-full h-9 px-2 bg-term-panel border border-term-border font-mono text-[11px] text-term-text focus:border-term-accent focus:outline-none"
+            >
+              {modelOptions.map(
+                (modelName) => (
+                  <option
+                    key={modelName}
+                    value={modelName}
+                  >
+                    {modelName}
+                  </option>
+                )
+              )}
+            </select>
+          ) : (
+            <div className="h-9 px-3 flex items-center border border-term-border bg-term-panel font-mono text-[10px] text-term-muted">
+              No model exposed
+            </div>
+          )}
+        </div>
+
+
+        {/* -------------------------------------------------------- */}
+        {/* Default action                                           */}
+        {/* -------------------------------------------------------- */}
+
+        <button
+          onClick={
+            chooseDefault
+          }
+          disabled={
+            busy ||
+            !model ||
+            isDefault
+          }
+          className={`w-full h-9 font-mono text-[10px] uppercase flex items-center justify-center gap-2 border ${
+            isDefault
+              ? "border-term-success/40 text-term-success bg-term-success/5"
+              : "border-term-border hover:border-term-accent hover:text-term-accent"
+          } disabled:opacity-40`}
+        >
+          {isDefault ? (
+            <>
+              <CheckCircle2
+                size={12}
+              />
+              default provider
+            </>
+          ) : (
+            <>
+              <Play
+                size={12}
+              />
+              use as default
+            </>
+          )}
+        </button>
+
+
+        {/* -------------------------------------------------------- */}
+        {/* Health detail                                            */}
+        {/* -------------------------------------------------------- */}
+
+        {providerHealth && (
+          <div className="border-t border-term-border/60 pt-3">
+            <div className="font-mono text-[9px] text-term-muted uppercase mb-1">
+              health detail
+            </div>
+
+            <div
+              className={`font-mono text-[10px] break-words ${
+                healthy
+                  ? "text-term-secondary"
+                  : "text-term-danger"
+              }`}
+            >
+              {providerHealth.detail ||
+                providerHealth.message ||
+                providerHealth.error ||
+                (healthy
+                  ? "Provider is healthy."
+                  : "Provider health check failed.")}
+            </div>
+
+            {providerHealth.latency_ms !==
+              undefined && (
+              <div className="font-mono text-[9px] text-term-muted mt-1">
+                latency:{" "}
+                {providerHealth.latency_ms}
+                ms
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Metadata item                                                      */
+/* ------------------------------------------------------------------ */
+
+function MetaItem({
+  label,
+  value,
+}) {
+  return (
+    <div className="border border-term-border/60 p-2">
+      <div className="font-mono text-[8px] text-term-muted uppercase">
+        {label}
+      </div>
+
+      <div className="font-mono text-[11px] text-term-secondary mt-1 truncate">
+        {formatValue(value)}
+      </div>
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Chat + presets workspace                                          */
+/* ------------------------------------------------------------------ */
+
+function EmptyState({
+  label,
+}) {
+  return (
+    <div className="border border-term-border bg-term-surface p-8 text-center">
+      <div className="font-mono text-[10px] text-term-muted uppercase">
+        {label}
+      </div>
+    </div>
+  );
+              }
+/* ------------------------------------------------------------------ */
+/* Chat + presets workspace                                           */
+/* ------------------------------------------------------------------ */
+
+function AIWorkspace({
+  prompt,
+  setPrompt,
+  chatResp,
+  busyAction,
+  sendChat,
+  presets,
+  runPreset,
+  newName,
+  setNewName,
+  newPrompt,
+  setNewPrompt,
+  createPreset,
+  deletePreset,
+}) {
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+
+      {/* ------------------------------------------------------------ */}
+      {/* AI chat                                                      */}
+      {/* ------------------------------------------------------------ */}
+
+      <section className="border border-term-border bg-term-surface">
+        <header className="h-10 px-4 flex items-center justify-between border-b border-term-border">
+          <div>
+            <div className="font-mono text-[9px] text-term-muted uppercase tracking-wider">
+              ai.chat
+            </div>
+
+            <div className="font-display text-[13px] font-bold">
+              AI Workspace
+            </div>
+          </div>
+
+          <span className="font-mono text-[9px] text-term-muted uppercase">
+            universal
+          </span>
+        </header>
+
+        <div className="p-4 space-y-3">
+          <textarea
+            value={prompt}
+            onChange={(event) =>
+              setPrompt(event.target.value)
+            }
+            rows={6}
+            maxLength={12000}
+            disabled={Boolean(busyAction)}
+            placeholder="Ask the configured AI provider..."
+            className="w-full bg-term-panel border border-term-border p-3 font-mono text-[11px] text-term-text focus:border-term-accent focus:outline-none resize-none disabled:opacity-50"
+          />
+
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-mono text-[9px] text-term-muted">
+              {prompt.length}/12000
+            </span>
+
+            <button
+              onClick={() =>
+                sendChat(prompt)
+              }
+              disabled={
+                Boolean(busyAction) ||
+                !prompt.trim()
+              }
+              className="h-9 px-4 bg-term-accent text-white font-mono text-[10px] uppercase disabled:opacity-40 flex items-center gap-2"
+            >
+              <Send size={11} />
+
+              {busyAction === "chat"
+                ? "thinking..."
+                : "send"}
+            </button>
+          </div>
+
+          {chatResp && (
+            <div className="border border-term-border bg-term-panel">
+              <div className="px-3 py-2 border-b border-term-border flex flex-wrap gap-x-3 gap-y-1">
+                {chatResp.provider && (
+                  <span className="font-mono text-[9px] text-term-muted">
+                    provider: {chatResp.provider}
+                  </span>
+                )}
+
+                {chatResp.model && (
+                  <span className="font-mono text-[9px] text-term-muted">
+                    model: {chatResp.model}
+                  </span>
+                )}
+
+                {chatResp.latency_ms !==
+                  undefined && (
+                  <span className="font-mono text-[9px] text-term-muted">
+                    latency: {chatResp.latency_ms}ms
+                  </span>
+                )}
+              </div>
+
+              <pre className="p-3 font-mono text-[11px] text-term-text whitespace-pre-wrap break-words overflow-x-auto">
+                {chatResp.text ||
+                  chatResp.answer ||
+                  chatResp.response ||
+                  JSON.stringify(
+                    chatResp,
+                    null,
+                    2
+                  )}
+              </pre>
+            </div>
+          )}
+        </div>
+      </section>
+
+
+      {/* ------------------------------------------------------------ */}
+      {/* Presets                                                      */}
+      {/* ------------------------------------------------------------ */}
+
+      <section className="border border-term-border bg-term-surface">
+        <header className="h-10 px-4 flex items-center justify-between border-b border-term-border">
+          <div>
+            <div className="font-mono text-[9px] text-term-muted uppercase tracking-wider">
+              ai.presets
+            </div>
+
+            <div className="font-display text-[13px] font-bold">
+              Command presets
+            </div>
+          </div>
+
+          <span className="font-mono text-[9px] text-term-muted">
+            {presets.length} saved
+          </span>
+        </header>
+
+        <div className="p-4 space-y-3">
+
+          {/* Existing presets */}
+          {presets.length === 0 ? (
+            <div className="border border-term-border/60 p-4 text-center">
+              <div className="font-mono text-[10px] text-term-muted">
+                No presets saved.
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+              {presets.map(
+                (preset, index) => {
+                  const presetId =
+                    preset.preset_id ||
+                    preset.id;
+
+                  return (
+                    <div
+                      key={
+                        presetId ||
+                        `preset-${index}`
+                      }
+                      className="border border-term-border/60 p-3 bg-term-panel"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-[11px] text-term-text">
+                            {preset.name ||
+                              "Unnamed preset"}
+                          </div>
+
+                          {preset.category && (
+                            <div className="font-mono text-[8px] text-term-muted uppercase mt-1">
+                              {preset.category}
+                            </div>
+                          )}
+
+                          <div className="font-mono text-[9px] text-term-secondary mt-2 whitespace-pre-wrap break-words">
+                            {preset.prompt ||
+                              "—"}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() =>
+                              runPreset(
+                                preset
+                              )
+                            }
+                            disabled={
+                              Boolean(
+                                busyAction
+                              ) ||
+                              !preset.prompt
+                            }
+                            className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-accent hover:text-term-accent disabled:opacity-40 flex items-center gap-1"
+                          >
+                            <Play size={9} />
+                            run
+                          </button>
+
+                          {presetId && (
+                            <button
+                              onClick={() =>
+                                deletePreset(
+                                  presetId
+                                )
+                              }
+                              disabled={
+                                Boolean(
+                                  busyAction
+                                )
+                              }
+                              className="h-7 w-7 border border-term-border font-mono text-[9px] hover:border-term-danger hover:text-term-danger disabled:opacity-40 flex items-center justify-center"
+                              title="Delete preset"
+                            >
+                              <Trash2
+                                size={10}
+                              />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+              )}
+            </div>
+          )}
+
+
+          {/* Create preset */}
+          <div className="border-t border-term-border pt-3">
+            <div className="font-mono text-[9px] text-term-muted uppercase mb-2">
+              create preset
+            </div>
+
+            <div className="space-y-2">
+              <input
+                value={newName}
+                onChange={(event) =>
+                  setNewName(
+                    event.target.value
+                  )
+                }
+                maxLength={100}
+                disabled={
+                  Boolean(
+                    busyAction
+                  )
+                }
+                placeholder="Preset name"
+                className="w-full h-9 px-3 bg-term-panel border border-term-border font-mono text-[10px] focus:border-term-accent focus:outline-none disabled:opacity-50"
+              />
+
+              <textarea
+                value={newPrompt}
+                onChange={(event) =>
+                  setNewPrompt(
+                    event.target.value
+                  )
+                }
+                rows={3}
+                maxLength={4000}
+                disabled={
+                  Boolean(
+                    busyAction
+                  )
+                }
+                placeholder="Preset prompt"
+                className="w-full bg-term-panel border border-term-border p-3 font-mono text-[10px] focus:border-term-accent focus:outline-none resize-none disabled:opacity-50"
+              />
+
+              <button
+                onClick={
+                  createPreset
+                }
+                disabled={
+                  Boolean(
+                    busyAction
+                  ) ||
+                  !newName.trim() ||
+                  !newPrompt.trim()
+                }
+                className="h-8 px-3 border border-term-border font-mono text-[9px] uppercase hover:border-term-accent hover:text-term-accent disabled:opacity-40 flex items-center gap-2"
+              >
+                <Plus size={10} />
+                save preset
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Usage panel                                                        */
+/* ------------------------------------------------------------------ */
+
+function UsagePanel({
+  usage,
+}) {
+  const entries =
+    Object.entries(
+      safeObject(
+        usage?.by_provider
+      )
+    );
+
+  return (
+    <section className="border border-term-border bg-term-surface">
+      <header className="h-10 px-4 flex items-center justify-between border-b border-term-border">
+        <div>
+          <div className="font-mono text-[9px] text-term-muted uppercase tracking-wider">
+            ai.usage
+          </div>
+
+          <div className="font-display text-[13px] font-bold">
+            Usage
+          </div>
+        </div>
+
+        <span className="font-mono text-[9px] text-term-muted">
+          total:{" "}
+          {Number(
+            usage?.total_requests
+          ) || 0}
+        </span>
+      </header>
+
+      <div className="p-4">
+        {entries.length === 0 ? (
+          <div className="font-mono text-[10px] text-term-muted">
+            No provider usage recorded.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+            {entries.map(
+              ([provider, data]) => {
+                const item =
+                  safeObject(data);
+
+                const requests =
+                  Number(
+                    item.requests ??
+                    item.total_requests ??
+                    item.count ??
+                    0
+                  ) || 0;
+
+                return (
+                  <div
+                    key={provider}
+                    className="border border-term-border/60 p-3 bg-term-panel"
+                  >
+                    <div className="font-mono text-[9px] text-term-muted uppercase truncate">
+                      {provider}
+                    </div>
+
+                    <div className="font-mono text-xl text-term-text mt-1">
+                      {requests}
+                    </div>
+
+                    {item.errors !==
+                      undefined && (
+                      <div className="font-mono text-[9px] text-term-danger mt-1">
+                        errors:{" "}
+                        {formatValue(
+                          item.errors
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Final page sections                                                */
+/* ------------------------------------------------------------------ */
+
+/*
+ * NOTE:
+ * The following wrapper is intentionally kept separate from the main
+ * provider registry card so future AI modules can consume the same
+ * universal provider state without introducing provider-specific UI
+ * contracts.
+ */
+
+function WorkspaceSection({
+  prompt,
+  setPrompt,
+  chatResp,
+  busyAction,
+  sendChat,
+  presets,
+  runPreset,
+  newName,
+  setNewName,
+  newPrompt,
+  setNewPrompt,
+  createPreset,
+  deletePreset,
+}) {
+  return (
+    <AIWorkspace
+      prompt={prompt}
+      setPrompt={setPrompt}
+      chatResp={chatResp}
+      busyAction={busyAction}
+      sendChat={sendChat}
+      presets={presets}
+      runPreset={runPreset}
+      newName={newName}
+      setNewName={setNewName}
+      newPrompt={newPrompt}
+      setNewPrompt={setNewPrompt}
+      createPreset={createPreset}
+      deletePreset={deletePreset}
+    />
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Additional export-safe utilities                                   */
+/* ------------------------------------------------------------------ */
+
+function ProviderHealthBadge({
+  health,
+}) {
+  if (!health) {
+    return (
+      <span className="font-mono text-[9px] text-term-muted uppercase">
+        unchecked
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={`font-mono text-[9px] uppercase ${
+        health.ok
+          ? "text-term-success"
+          : "text-term-danger"
+      }`}
+    >
+      {health.ok
+        ? "healthy"
+        : "error"}
+    </span>
+  );
+    }
+      <WorkspaceSection
+        prompt={prompt}
+        setPrompt={setPrompt}
+        chatResp={chatResp}
+        busyAction={busyAction}
+        sendChat={sendChat}
+        presets={presets}
+        runPreset={runPreset}
+        newName={newName}
+        setNewName={setNewName}
+        newPrompt={newPrompt}
+        setNewPrompt={setNewPrompt}
+        createPreset={createPreset}
+        deletePreset={deletePreset}
+      />
+
+      <UsagePanel
+        usage={usage}
+      />
+
+
