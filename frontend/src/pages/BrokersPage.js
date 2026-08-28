@@ -678,4 +678,194 @@ export default function BrokersPage() {
                           />
                           {status.label}
                         </span>
+</td>
+
+<td className="px-4
+
+h-11 max-w-[280px]">
+
+{account.last_health ? (
+
+<div
+
+className="font-mono text [10px]">
+
+<div
+
+className={
+
+account.last_health.ok
+
+"text-term-success"
+
+"text-term-danger"
+
+}
+
+>
+
+?
+
+{account.last_health.ok? "OK" : "FAILED"}
+
+{typeof
+
+account.last_health.latency_ms ===
+
+"number"
+
+?$
+
+{account.last_health.latency_ms}ms`
+
+: ""}
+
+</div>
+
+{account.last_health.detail && (
+
+<div
+
+className="text-term-muted truncate"
+
+title={account.last_health.detail}
+
+>
+
+{account.last_health.detail}
+
+</div>
+
+)}
+
+</div>):(
+
+<span
+
+className="font-mono text-[10px]
+
+text-term-muted">
+
+</span>
+
+)}
+
+</td>
+
+<td className="px-4
+
+h-11">
+
+{account.is_primary? (
+
+<span
+
+className="inline-flex items-center gap-1
+
+font-mono text [10px] text-term-success
+
+uppercase">
+
+<Check
+
+size={11} />
+
+yes
+
+</span>
+
+):(
+
+<button
+
+data-testid={BROKER_TEST_IDS.primary(
+
+account.account_id
+
+)}
+
+onClick={() =>
+
+doPrimary(account)}
+
+disabled={makingPrimary}
+
+className="font-mono text [10px]
+
+text-term-muted hover: text-term-accent
+
+underline disabled: opacity-40"
+
+{makingPrimary
+
+?
+
+"setting..."
+: "make
+
+primary"}
+
+LTE
+
+34
+
+</button>
+
+)}
+
+</td>
+
+<td className="px-4
+
+h-11 text-right">
+
+<div
+
+className="inline-flex gap-1 flex-wrap
+
+justify-end">
+
+{account.status
+
+=== "connected" ? (
+
+<ActionButton
+
+testId={BROKER_TEST_IDS.disconnect(
+
+account.account_id
+
+)}
+
+onClick={()
+
+=> doDisconnect (account)}
+
+disabled={disconnecting}
+
+icon={
+
+disconnecting ? (
+
+<Loader2
+
+/>
+
+size={10}
+
+className="animate-spin"
+
+):(
+
+<Radio
+
+size={10} />
+
+)
+
+}
+
+label={
+
+disconnecting
  
