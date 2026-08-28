@@ -11,13 +11,14 @@ Current authentication:
         -> Trade Session
 
 This adapter is the single Kotak-specific integration boundary.
-The rest of the application must depend only on BrokerPluginBase.
+The rest of the application depends only on BrokerPluginBase.
 
 IMPORTANT:
 - No legacy api_key/api_secret/password authentication.
 - No direct legacy session/create HTTP implementation.
-- Credentials are never returned or logged.
-- Kotak-specific SDK/API details stay inside this file.
+- Credentials and authentication tokens are never returned or logged.
+- Kotak-specific SDK/API details remain inside this adapter.
+- Runtime authentication state is kept only in memory.
 """
 
 from __future__ import annotations
@@ -33,7 +34,14 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
     """
     Current Kotak Neo broker implementation.
 
-    The adapter uses the official maintained `kotakneoapi` SDK.
+    Authentication uses the official NeoAPI SDK:
+
+        NeoAPI(consumer_key=..., environment="prod")
+        -> totp_login(...)
+        -> totp_validate(...)
+
+    After successful MPIN validation, the official SDK owns the
+    authenticated trade session.
     """
 
     plugin_id = "kotak_neo"
@@ -41,7 +49,6 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
     version = "3.0.1"
     category = "indian"
 
-    # Current Kotak Neo authentication contract.
     required_credentials = [
         "consumer_key",
         "mobileno",
@@ -61,11 +68,8 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
     SDK_PACKAGE = "kotakneoapi"
 
     def __init__(self) -> None:
-        # The official NeoAPI client keeps the authenticated session
-        # internally after totp_validate().
-        #
-        # Only runtime session objects are kept here.
-        # Credentials are never persisted by this adapter.
+        # The SDK client and authenticated session are runtime-only.
+        # Credentials are never stored by this adapter.
         self._client: Any | None = None
         self._session: dict[str, Any] = {}
         self._session_lock = asyncio.Lock()
@@ -79,7 +83,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         credentials: dict[str, Any],
     ) -> BrokerHealth:
         """
-        Authenticate with the current Kotak Neo TOTP + MPIN flow.
+        Authenticate using the current Kotak Neo TOTP + MPIN flow.
 
         Flow:
             NeoAPI(consumer_key=...)
@@ -165,7 +169,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
 
                 status = str(
                     session_data.get("status", "")
-                ).lower()
+                ).strip().lower()
 
                 if status and status != "success":
                     return BrokerHealth(
@@ -178,22 +182,27 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
                         latency_ms=self._latency_ms(started),
                     )
 
-                # The SDK owns the authenticated trade session.
+                # Only runtime session metadata is retained.
+                # Authentication tokens remain owned by the SDK client.
                 self._client = client
-
                 self._session = {
                     "authenticated": True,
-                    "base_url": session_data.get("baseUrl"),
                     "sid": session_data.get("sid"),
                     "ucc": session_data.get("ucc"),
                     "greeting_name": session_data.get(
                         "greetingName"
                     ),
+                    "base_url": session_data.get("baseUrl"),
                     "data_center": session_data.get(
                         "dataCenter"
                     ),
-                    "k_type": session_data.get(
-                        "kType"
+                    "k_type": session_data.get("kType"),
+                    "client_type": session_data.get(
+                        "clientType"
+                    ),
+                    "is_nri": session_data.get("isNRI"),
+                    "dormancy_status": session_data.get(
+                        "dormancyStatus"
                     ),
                 }
 
@@ -204,9 +213,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
 
                 return BrokerHealth(
                     ok=True,
-                    detail=(
-                        f"Connected · {greeting_name}"
-                    ),
+                    detail=f"Connected · {greeting_name}",
                     latency_ms=self._latency_ms(started),
                 )
 
@@ -232,13 +239,14 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         account_id: str,
     ) -> None:
         """
-        End the current Kotak Neo trading session.
+        End the current Kotak Neo runtime session.
 
-        The current universal broker contract supplies account_id only
-        to disconnect/health methods, while connect() receives credentials.
-        The adapter therefore maintains the authenticated SDK client as
-        the runtime session for the currently configured Kotak account.
+        The universal broker contract provides account_id here while
+        connect() receives credentials. The SDK client is therefore
+        maintained as the runtime session for the active Kotak account.
         """
+        del account_id
+
         async with self._session_lock:
             client = self._client
 
@@ -255,11 +263,11 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
                     None,
                 )
 
-                if logout is not None:
+                if callable(logout):
                     await asyncio.to_thread(logout)
 
             except Exception:
-                # Disconnect is intentionally idempotent.
+                # Disconnect must remain idempotent.
                 pass
 
     async def health(
@@ -267,10 +275,12 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         account_id: str,
     ) -> BrokerHealth:
         """
-        Return local authenticated-session health.
+        Return the current local authenticated-session state.
 
-        This does not place an order or perform a trading operation.
+        This method never places an order or performs a trading action.
         """
+        del account_id
+
         if (
             self._client is None
             or not self._session.get("authenticated")
@@ -292,9 +302,10 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         credentials: dict[str, Any],
     ) -> dict[str, Any]:
         """
-        Authenticate and return safe account/session information.
+        Authenticate and return safe Kotak account/session information.
 
-        Sensitive credentials and authentication tokens are removed.
+        Sensitive credentials and authentication tokens are never
+        included in the returned payload.
         """
         missing = self.validate_credentials(credentials)
 
@@ -386,6 +397,12 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
                         "dormancyStatus"
                     ),
                     "account_type": data.get("kType"),
+                    "is_trial_account": data.get(
+                        "isTrialAccount"
+                    ),
+                    "is_user_pwd_expired": data.get(
+                        "isUserPwdExpired"
+                    ),
                     "latency_ms": self._latency_ms(
                         started
                     ),
@@ -417,7 +434,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         """
         Lazily import and construct the current official SDK client.
 
-        Lazy import keeps application startup independent from the
+        Lazy loading keeps application startup independent from the
         optional broker SDK until Kotak is actually used.
         """
         try:
@@ -460,7 +477,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         response: Any,
     ) -> bool:
         """
-        Detect the current Kotak SDK/API failure response shape.
+        Detect known Kotak SDK/API failure response shapes.
         """
         if response is None:
             return True
@@ -470,7 +487,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
 
         stat = str(
             response.get("stat", "")
-        ).lower()
+        ).strip().lower()
 
         if stat in {
             "not_ok",
@@ -488,7 +505,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         if data:
             status = str(
                 data.get("status", "")
-            ).lower()
+            ).strip().lower()
 
             if status in {
                 "failed",
@@ -506,7 +523,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         fallback: str,
     ) -> str:
         """
-        Convert a Kotak response into a safe short error message.
+        Convert a Kotak response into a short safe error message.
         """
         if isinstance(response, dict):
             error = response.get("error")
@@ -565,7 +582,8 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         exc: Exception,
     ) -> str:
         """
-        Do not expose credentials/tokens in application errors.
+        Avoid exposing credentials, authentication material,
+        or session tokens through application errors.
         """
         message = str(exc)
 
@@ -593,4 +611,4 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         return (
             message[:200]
             or "Kotak Neo request failed"
-            )
+                    )
