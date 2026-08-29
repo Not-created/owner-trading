@@ -1363,3 +1363,567 @@ function BrokerCard({
     </div>
   );
                 }
+function AddAccountModal({
+  plugin,
+  onClose,
+  onCreated,
+}) {
+  const [label, setLabel] =
+    useState("");
+
+  const [credentials, setCredentials] =
+    useState({});
+
+  const [visible, setVisible] =
+    useState({});
+
+  const [busy, setBusy] =
+    useState(false);
+
+  const requiredCredentials =
+    safeArray(
+      plugin?.required_credentials
+    );
+
+  const credentialLabels =
+    safeObject(
+      plugin?.credential_labels
+    );
+
+  useEffect(() => {
+    const initial = {};
+
+    requiredCredentials.forEach(
+      (key) => {
+        initial[key] = "";
+      }
+    );
+
+    setLabel("");
+    setCredentials(
+      initial
+    );
+    setVisible({});
+  }, [plugin]);
+
+  if (!plugin) {
+    return null;
+  }
+
+  const updateCredential = (
+    key,
+    value
+  ) => {
+    setCredentials(
+      (current) => ({
+        ...current,
+        [key]: value,
+      })
+    );
+  };
+
+  const submit = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    if (busy) {
+      return;
+    }
+
+    const cleanLabel =
+      label.trim();
+
+    if (!cleanLabel) {
+      toast.error(
+        "Account label is required"
+      );
+      return;
+    }
+
+    const missing =
+      requiredCredentials.filter(
+        (key) =>
+          !String(
+            credentials[key] ??
+              ""
+          ).trim()
+      );
+
+    if (missing.length) {
+      toast.error(
+        `Missing: ${missing
+          .map(
+            (key) =>
+              displayCredentialLabel(
+                key,
+                credentialLabels
+              )
+          )
+          .join(", ")}`
+      );
+
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      const { data } =
+        await api.post(
+          "/brokers/accounts",
+          {
+            plugin_id:
+              plugin.plugin_id,
+            label:
+              cleanLabel,
+            credentials,
+          }
+        );
+
+      toast.success(
+        data?.account_id
+          ? "Broker account added"
+          : "Broker account created"
+      );
+
+      onCreated?.(data);
+      onClose?.();
+    } catch (error) {
+      toast.error(
+        formatApiError(error)
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      data-testid={
+        BROKER_TEST_IDS.modal
+      }
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="broker-add-modal-title"
+    >
+      <div
+        className="absolute inset-0 bg-black/70"
+        onClick={() =>
+          !busy &&
+          onClose?.()
+        }
+      />
+
+      <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto border border-term-border bg-term-surface shadow-2xl">
+        <header className="min-h-12 px-4 py-3 border-b border-term-border flex items-start justify-between gap-4">
+          <div>
+            <div className="font-mono text-[9px] text-term-muted uppercase tracking-wider">
+              broker.accounts.new
+            </div>
+
+            <h2
+              id="broker-add-modal-title"
+              className="font-display text-[16px] font-bold mt-0.5"
+            >
+              Add{" "}
+              {plugin.display_name ||
+                plugin.plugin_id}
+            </h2>
+
+            <div className="font-mono text-[9px] text-term-muted mt-1">
+              {plugin.plugin_id}
+              {" · v"}
+              {plugin.version ||
+                "—"}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            data-testid={
+              BROKER_TEST_IDS.modalClose
+            }
+            onClick={
+              onClose
+            }
+            disabled={
+              busy
+            }
+            aria-label="Close"
+            className="h-7 w-7 border border-term-border flex items-center justify-center hover:border-term-danger hover:text-term-danger disabled:opacity-40"
+          >
+            <X size={12} />
+          </button>
+        </header>
+
+        <div className="mx-4 mt-4 border border-term-success/30 bg-term-success/5 p-3 flex gap-2">
+          <ShieldCheck
+            size={13}
+            className="text-term-success shrink-0 mt-0.5"
+          />
+
+          <div>
+            <div className="font-mono text-[9px] text-term-success uppercase">
+              encrypted credential storage
+            </div>
+
+            <div className="font-mono text-[10px] text-term-secondary mt-1 leading-relaxed">
+              Credentials are sent to the authenticated backend and
+              encrypted server-side. They are never persisted in browser
+              storage or returned to this UI.
+            </div>
+          </div>
+        </div>
+
+        <form
+          onSubmit={submit}
+          className="p-4 space-y-4"
+        >
+          <div>
+            <label
+              htmlFor="broker-account-label"
+              className="block font-mono text-[9px] text-term-muted uppercase mb-1.5"
+            >
+              Account Label
+            </label>
+
+            <input
+              id="broker-account-label"
+              data-testid={
+                BROKER_TEST_IDS.modalLabel
+              }
+              value={label}
+              onChange={(
+                event
+              ) =>
+                setLabel(
+                  event.target.value
+                )
+              }
+              maxLength={64}
+              disabled={busy}
+              autoFocus
+              placeholder="e.g. Kotak Main Account"
+              className="w-full h-9 px-3 bg-term-panel border border-term-border font-mono text-[11px] text-term-text focus:border-term-accent focus:outline-none disabled:opacity-50"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <div className="font-mono text-[9px] text-term-muted uppercase tracking-wider">
+              broker credentials
+            </div>
+
+            {requiredCredentials.length ===
+            0 ? (
+              <div className="border border-term-border/60 p-3 font-mono text-[10px] text-term-muted">
+                This broker does not require additional credentials.
+              </div>
+            ) : (
+              requiredCredentials.map(
+                (key) => {
+                  const secret =
+                    credentialInputType(
+                      key
+                    ) ===
+                    "password";
+
+                  const isVisible =
+                    Boolean(
+                      visible[key]
+                    );
+
+                  const labelText =
+                    displayCredentialLabel(
+                      key,
+                      credentialLabels
+                    );
+
+                  return (
+                    <div
+                      key={key}
+                    >
+                      <label
+                        htmlFor={`broker-credential-${key}`}
+                        className="block font-mono text-[9px] text-term-muted uppercase mb-1.5"
+                      >
+                        {
+                          labelText
+                        }
+                      </label>
+
+                      <div className="relative">
+                        <input
+                          id={`broker-credential-${key}`}
+                          data-testid={BROKER_TEST_IDS.modalCredential(
+                            key
+                          )}
+                          type={
+                            secret &&
+                            !isVisible
+                              ? "password"
+                              : "text"
+                          }
+                          inputMode={credentialInputMode(
+                            key
+                          )}
+                          autoComplete="off"
+                          value={
+                            credentials[
+                              key
+                            ] ||
+                            ""
+                          }
+                          onChange={(
+                            event
+                          ) =>
+                            updateCredential(
+                              key,
+                              event
+                                .target
+                                .value
+                            )
+                          }
+                          disabled={
+                            busy
+                          }
+                          placeholder={
+                            labelText
+                          }
+                          className={`w-full h-9 ${
+                            secret
+                              ? "pr-10"
+                              : ""
+                          } px-3 bg-term-panel border border-term-border font-mono text-[11px] text-term-text focus:border-term-accent focus:outline-none disabled:opacity-50`}
+                        />
+
+                        {secret && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setVisible(
+                                (
+                                  current
+                                ) => ({
+                                  ...current,
+                                  [key]:
+                                    !current[
+                                      key
+                                    ],
+                                })
+                              )
+                            }
+                            disabled={
+                              busy
+                            }
+                            aria-label={
+                              isVisible
+                                ? `Hide ${labelText}`
+                                : `Show ${labelText}`
+                            }
+                            className="absolute right-0 top-0 h-9 w-9 flex items-center justify-center text-term-muted hover:text-term-text disabled:opacity-40"
+                          >
+                            {isVisible ? (
+                              <EyeOff
+                                size={
+                                  12
+                                }
+                              />
+                            ) : (
+                              <Eye
+                                size={
+                                  12
+                                }
+                              />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+              )
+            )}
+          </div>
+
+          {plugin.plugin_id ===
+            "kotak_neo" && (
+            <div className="border border-term-accent/30 bg-term-accent/5 p-3">
+              <div className="flex items-start gap-2">
+                <Info
+                  size={12}
+                  className="text-term-accent shrink-0 mt-0.5"
+                />
+
+                <div className="font-mono text-[10px] text-term-secondary leading-relaxed">
+                  Kotak Neo currently uses Consumer Key + Mobile Number +
+                  UCC + TOTP + MPIN. Authentication is performed by the
+                  backend Kotak adapter.
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="pt-2 flex items-center justify-between gap-3 border-t border-term-border">
+            <div className="font-mono text-[9px] text-term-muted">
+              {
+                requiredCredentials.length
+              }{" "}
+              credential
+              {requiredCredentials.length ===
+              1
+                ? ""
+                : "s"}{" "}
+              required
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={
+                  onClose
+                }
+                disabled={
+                  busy
+                }
+                className="h-9 px-3 border border-term-border font-mono text-[10px] uppercase hover:border-term-danger hover:text-term-danger disabled:opacity-40"
+              >
+                cancel
+              </button>
+
+              <button
+                type="submit"
+                data-testid={
+                  BROKER_TEST_IDS.modalSubmit
+                }
+                disabled={
+                  busy ||
+                  !label.trim() ||
+                  requiredCredentials.some(
+                    (key) =>
+                      !String(
+                        credentials[
+                          key
+                        ] ??
+                          ""
+                      ).trim()
+                  )
+                }
+                className="h-9 px-4 bg-term-accent text-white font-mono text-[10px] uppercase disabled:opacity-40 flex items-center gap-2"
+              >
+                {busy ? (
+                  <Loader2
+                    size={12}
+                    className="animate-spin"
+                  />
+                ) : (
+                  <Plus size={12} />
+                )}
+
+                {busy
+                  ? "saving..."
+                  : "add account"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AccountInfoModal({
+  account,
+  data,
+  loading,
+  onClose,
+}) {
+  return (
+    <div
+      data-testid={
+        BROKER_TEST_IDS.infoPanel
+      }
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="broker-info-modal-title"
+    >
+      <div
+        className="absolute inset-0 bg-black/70"
+        onClick={onClose}
+      />
+
+      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-term-border bg-term-surface shadow-2xl">
+        <header className="min-h-12 px-4 py-3 border-b border-term-border flex items-start justify-between gap-4">
+          <div>
+            <div className="font-mono text-[9px] text-term-muted uppercase tracking-wider">
+              broker.account_info
+            </div>
+
+            <h2
+              id="broker-info-modal-title"
+              className="font-display text-[15px] font-bold mt-0.5"
+            >
+              {account?.label ||
+                "Account information"}
+            </h2>
+
+            <div className="font-mono text-[9px] text-term-muted mt-1">
+              {account?.plugin_id ||
+                "—"}
+            </div>
+          </div>
+
+          <button
+            data-testid={
+              BROKER_TEST_IDS.infoClose
+            }
+            onClick={
+              onClose
+            }
+            className="h-7 w-7 border border-term-border flex items-center justify-center hover:border-term-accent hover:text-term-accent"
+            aria-label="Close"
+          >
+            <X size={12} />
+          </button>
+        </header>
+
+        <div className="p-4">
+          {loading ? (
+            <div className="flex items-center gap-2 font-mono text-[10px] text-term-muted">
+              <Loader2
+                size={12}
+                className="animate-spin"
+              />
+              loading account information...
+            </div>
+          ) : data ? (
+            <div className="space-y-3">
+              <pre className="border border-term-border/60 bg-term-panel p-4 overflow-x-auto font-mono text-[10px] leading-5 text-term-secondary whitespace-pre-wrap break-words">
+                {JSON.stringify(
+                  redactSensitiveInfo(
+                    data
+                  ),
+                  null,
+                  2
+                )}
+              </pre>
+
+              <div className="font-mono text-[9px] text-term-muted flex items-center gap-1">
+                <ShieldCheck
+                  size={10}
+                />
+                Sensitive credential material is redacted.
+              </div>
+            </div>
+          ) : (
+            <div className="font-mono text-[10px] text-term-muted">
+              No account information returned.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
