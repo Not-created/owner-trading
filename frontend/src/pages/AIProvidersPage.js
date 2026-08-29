@@ -714,6 +714,27 @@ export default function AIProvidersPage() {
           </div>
         )}
       </section>
+
+      <WorkspaceSection
+        prompt={prompt}
+        setPrompt={setPrompt}
+        chatResp={chatResp}
+        busyAction={busyAction}
+        sendChat={sendChat}
+        presets={presets}
+        runPreset={runPreset}
+        newName={newName}
+        setNewName={setNewName}
+        newPrompt={newPrompt}
+        setNewPrompt={setNewPrompt}
+        createPreset={createPreset}
+        deletePreset={deletePreset}
+      />
+
+      <UsagePanel
+        usage={usage}
+      />
+    </div>
   );
 }
 
@@ -807,6 +828,7 @@ function ProviderCard({
     Number(
       providerUsage?.requests ??
       providerUsage?.total_requests ??
+      providerUsage?.count ??
       0
     ) || 0;
 
@@ -829,13 +851,16 @@ function ProviderCard({
 
   return (
     <article
+      data-testid={
+        TEST_IDS.ai.providerCard(providerId)
+      }
       className={`border bg-term-surface ${
         isDefault
           ? "border-term-accent"
           : "border-term-border"
       }`}
     >
-      {/* ---------------------------------------------------------- */}
+            {/* ---------------------------------------------------------- */}
       {/* Provider header                                            */}
       {/* ---------------------------------------------------------- */}
 
@@ -872,7 +897,6 @@ function ProviderCard({
             )}
           </div>
         </div>
-
 
         {provider.description && (
           <p className="text-term-secondary text-[11px] mt-3 leading-relaxed">
@@ -946,6 +970,9 @@ function ProviderCard({
         {/* -------------------------------------------------------- */}
 
         <button
+          data-testid={
+            TEST_IDS.ai.setDefault(providerId)
+          }
           onClick={
             chooseDefault
           }
@@ -1042,7 +1069,7 @@ function MetaItem({
 
 
 /* ------------------------------------------------------------------ */
-/* Chat + presets workspace                                          */
+/* Empty state                                                        */
 /* ------------------------------------------------------------------ */
 
 function EmptyState({
@@ -1055,9 +1082,11 @@ function EmptyState({
       </div>
     </div>
   );
-              }
+}
+
+
 /* ------------------------------------------------------------------ */
-/* Chat + presets workspace                                           */
+/* Chat + presets workspace                                          */
 /* ------------------------------------------------------------------ */
 
 function AIWorkspace({
@@ -1101,23 +1130,33 @@ function AIWorkspace({
 
         <div className="p-4 space-y-3">
           <textarea
+            data-testid={
+              TEST_IDS.ai.chatInput
+            }
             value={prompt}
             onChange={(event) =>
-              setPrompt(event.target.value)
+              setPrompt(
+                event.target.value
+              )
             }
             rows={6}
-            maxLength={12000}
-            disabled={Boolean(busyAction)}
+            maxLength={8000}
+            disabled={
+              Boolean(busyAction)
+            }
             placeholder="Ask the configured AI provider..."
             className="w-full bg-term-panel border border-term-border p-3 font-mono text-[11px] text-term-text focus:border-term-accent focus:outline-none resize-none disabled:opacity-50"
           />
 
           <div className="flex items-center justify-between gap-3">
             <span className="font-mono text-[9px] text-term-muted">
-              {prompt.length}/12000
+              {prompt.length}/8000
             </span>
 
             <button
+              data-testid={
+                TEST_IDS.ai.chatSend
+              }
               onClick={() =>
                 sendChat(prompt)
               }
@@ -1136,7 +1175,12 @@ function AIWorkspace({
           </div>
 
           {chatResp && (
-            <div className="border border-term-border bg-term-panel">
+            <div
+              data-testid={
+                TEST_IDS.ai.chatOutput
+              }
+              className="border border-term-border bg-term-panel"
+            >
               <div className="px-3 py-2 border-b border-term-border flex flex-wrap gap-x-3 gap-y-1">
                 {chatResp.provider && (
                   <span className="font-mono text-[9px] text-term-muted">
@@ -1154,6 +1198,12 @@ function AIWorkspace({
                   undefined && (
                   <span className="font-mono text-[9px] text-term-muted">
                     latency: {chatResp.latency_ms}ms
+                  </span>
+                )}
+
+                {chatResp.failover_from && (
+                  <span className="font-mono text-[9px] text-term-warning">
+                    failover: {chatResp.failover_from}
                   </span>
                 )}
               </div>
@@ -1197,7 +1247,6 @@ function AIWorkspace({
 
         <div className="p-4 space-y-3">
 
-          {/* Existing presets */}
           {presets.length === 0 ? (
             <div className="border border-term-border/60 p-4 text-center">
               <div className="font-mono text-[10px] text-term-muted">
@@ -1205,7 +1254,12 @@ function AIWorkspace({
               </div>
             </div>
           ) : (
-            <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+            <div
+              data-testid={
+                TEST_IDS.ai.presetsList
+              }
+              className="space-y-2 max-h-[360px] overflow-y-auto pr-1"
+            >
               {presets.map(
                 (preset, index) => {
                   const presetId =
@@ -1241,6 +1295,12 @@ function AIWorkspace({
 
                         <div className="flex items-center gap-1 shrink-0">
                           <button
+                            data-testid={
+                              TEST_IDS.ai.presetRun(
+                                presetId ||
+                                `index-${index}`
+                              )
+                            }
                             onClick={() =>
                               runPreset(
                                 preset
@@ -1260,6 +1320,11 @@ function AIWorkspace({
 
                           {presetId && (
                             <button
+                              data-testid={
+                                TEST_IDS.ai.presetDelete(
+                                  presetId
+                                )
+                              }
                               onClick={() =>
                                 deletePreset(
                                   presetId
@@ -1287,8 +1352,6 @@ function AIWorkspace({
             </div>
           )}
 
-
-          {/* Create preset */}
           <div className="border-t border-term-border pt-3">
             <div className="font-mono text-[9px] text-term-muted uppercase mb-2">
               create preset
@@ -1296,13 +1359,16 @@ function AIWorkspace({
 
             <div className="space-y-2">
               <input
+                data-testid={
+                  TEST_IDS.ai.presetNewName
+                }
                 value={newName}
                 onChange={(event) =>
                   setNewName(
                     event.target.value
                   )
                 }
-                maxLength={100}
+                maxLength={64}
                 disabled={
                   Boolean(
                     busyAction
@@ -1313,6 +1379,9 @@ function AIWorkspace({
               />
 
               <textarea
+                data-testid={
+                  TEST_IDS.ai.presetNewPrompt
+                }
                 value={newPrompt}
                 onChange={(event) =>
                   setNewPrompt(
@@ -1320,7 +1389,7 @@ function AIWorkspace({
                   )
                 }
                 rows={3}
-                maxLength={4000}
+                maxLength={8000}
                 disabled={
                   Boolean(
                     busyAction
@@ -1331,6 +1400,9 @@ function AIWorkspace({
               />
 
               <button
+                data-testid={
+                  TEST_IDS.ai.presetCreate
+                }
                 onClick={
                   createPreset
                 }
@@ -1355,6 +1427,9 @@ function AIWorkspace({
 }
 
 
+/* ------------------------------------------------------------------ */
+/* Usage panel                                                        */
+/* ------------------------------------------------------------------ */
 /* ------------------------------------------------------------------ */
 /* Usage panel                                                        */
 /* ------------------------------------------------------------------ */
@@ -1488,56 +1563,4 @@ function WorkspaceSection({
       deletePreset={deletePreset}
     />
   );
-}
-
-
-/* ------------------------------------------------------------------ */
-/* Additional export-safe utilities                                   */
-/* ------------------------------------------------------------------ */
-
-function ProviderHealthBadge({
-  health,
-}) {
-  if (!health) {
-    return (
-      <span className="font-mono text-[9px] text-term-muted uppercase">
-        unchecked
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className={`font-mono text-[9px] uppercase ${
-        health.ok
-          ? "text-term-success"
-          : "text-term-danger"
-      }`}
-    >
-      {health.ok
-        ? "healthy"
-        : "error"}
-    </span>
-  );
-    }
-      <WorkspaceSection
-        prompt={prompt}
-        setPrompt={setPrompt}
-        chatResp={chatResp}
-        busyAction={busyAction}
-        sendChat={sendChat}
-        presets={presets}
-        runPreset={runPreset}
-        newName={newName}
-        setNewName={setNewName}
-        newPrompt={newPrompt}
-        setNewPrompt={setNewPrompt}
-        createPreset={createPreset}
-        deletePreset={deletePreset}
-      />
-
-      <UsagePanel
-        usage={usage}
-      />
-
-
+          }
