@@ -71,7 +71,9 @@ def _require_plugin(plugin_id: str):
     return plugin
 
 
-def _safe_account_document(account: dict[str, Any]) -> dict[str, Any]:
+def _safe_account_document(
+    account: dict[str, Any],
+) -> dict[str, Any]:
     """
     Convert a MongoDB broker-account document into a frontend-safe object.
 
@@ -82,24 +84,48 @@ def _safe_account_document(account: dict[str, Any]) -> dict[str, Any]:
         "account_id": account.get("account_id"),
         "plugin_id": account.get("plugin_id"),
         "label": account.get("label"),
-        "status": account.get("status", "disconnected"),
-        "is_primary": bool(account.get("is_primary", False)),
-        "created_at": account.get("created_at"),
-        "updated_at": account.get("updated_at"),
-        "last_health": account.get("last_health"),
+        "status": account.get(
+            "status",
+            "disconnected",
+        ),
+        "is_primary": bool(
+            account.get(
+                "is_primary",
+                False,
+            )
+        ),
+        "created_at": account.get(
+            "created_at"
+        ),
+        "updated_at": account.get(
+            "updated_at"
+        ),
+        "last_health": account.get(
+            "last_health"
+        ),
     }
 
 
-def _decrypt_credentials(account: dict[str, Any]) -> dict[str, str]:
+def _decrypt_credentials(
+    account: dict[str, Any],
+) -> dict[str, str]:
     """
     Decrypt credentials only at the point where the broker adapter needs them.
 
     Credentials must never be returned to API callers or written to logs.
     """
 
-    encrypted = account.get("credentials_encrypted") or {}
+    encrypted = (
+        account.get(
+            "credentials_encrypted"
+        )
+        or {}
+    )
 
-    if not isinstance(encrypted, dict):
+    if not isinstance(
+        encrypted,
+        dict,
+    ):
         raise AppError(
             "BROKER_CREDENTIALS_INVALID",
             status=500,
@@ -113,6 +139,7 @@ def _decrypt_credentials(account: dict[str, Any]) -> dict[str, str]:
             key: encryption.decrypt(value)
             for key, value in encrypted.items()
         }
+
     except Exception as exc:
         # Do not expose encryption internals or credential material.
         raise AppError(
@@ -132,7 +159,9 @@ async def _get_owned_account(
     Ownership is always checked at the database query boundary.
     """
 
-    account_id = str(account_id or "").strip()
+    account_id = str(
+        account_id or ""
+    ).strip()
 
     if not account_id:
         raise AppError(
@@ -181,7 +210,9 @@ async def list_plugins() -> list[dict[str, Any]]:
 # ----------------------------------------------------------------------
 
 
-async def list_accounts(user_id: str) -> list[dict[str, Any]]:
+async def list_accounts(
+    user_id: str,
+) -> list[dict[str, Any]]:
     """
     List broker accounts belonging only to the current user.
 
@@ -191,7 +222,9 @@ async def list_accounts(user_id: str) -> list[dict[str, Any]]:
     db = get_db()
 
     cursor = db.broker_accounts.find(
-        {"user_id": user_id},
+        {
+            "user_id": user_id,
+        },
         {
             "_id": 0,
             "credentials_encrypted": 0,
@@ -201,7 +234,11 @@ async def list_accounts(user_id: str) -> list[dict[str, Any]]:
     accounts: list[dict[str, Any]] = []
 
     async for account in cursor:
-        accounts.append(_safe_account_document(account))
+        accounts.append(
+            _safe_account_document(
+                account
+            )
+        )
 
     return accounts
 
@@ -226,25 +263,40 @@ async def add_account(
     explicitly use connect_account() or test_connection().
     """
 
-    plugin = _require_plugin(plugin_id)
+    plugin = _require_plugin(
+        plugin_id
+    )
 
-    if not isinstance(credentials, dict) or not credentials:
+    if (
+        not isinstance(
+            credentials,
+            dict,
+        )
+        or not credentials
+    ):
         raise AppError(
             "VALIDATION",
             status=400,
             detail="Broker credentials are required",
         )
 
-    missing = plugin.validate_credentials(credentials)
+    missing = plugin.validate_credentials(
+        credentials
+    )
 
     if missing:
         raise AppError(
             "VALIDATION",
             status=400,
-            detail=f"Missing: {', '.join(missing)}",
+            detail=(
+                "Missing: "
+                + ", ".join(missing)
+            ),
         )
 
-    clean_label = str(label or "").strip()
+    clean_label = str(
+        label or ""
+    ).strip()
 
     if not clean_label:
         raise AppError(
@@ -258,9 +310,12 @@ async def add_account(
 
     try:
         encrypted_credentials = {
-            key: encryption.encrypt(str(value))
+            key: encryption.encrypt(
+                str(value)
+            )
             for key, value in credentials.items()
         }
+
     except Exception as exc:
         raise AppError(
             "BROKER_CREDENTIALS_ERROR",
@@ -289,7 +344,10 @@ async def add_account(
 
     await log_service.info(
         "broker",
-        f"Broker account added: {plugin.plugin_id}/{clean_label}",
+        (
+            "Broker account added: "
+            f"{plugin.plugin_id}/{clean_label}"
+        ),
         user_id=user_id,
     )
 
@@ -318,13 +376,26 @@ async def remove_account(
     Database removal remains scoped to the owning user.
     """
 
-    account = await _get_owned_account(user_id, account_id)
+    account = await _get_owned_account(
+        user_id,
+        account_id,
+    )
 
-    plugin = broker_registry.get(account.get("plugin_id"))
+    plugin = broker_registry.get(
+        account.get(
+            "plugin_id"
+        )
+    )
 
-    if account.get("status") == "connected" and plugin:
+    if (
+        account.get("status")
+        == "connected"
+        and plugin
+    ):
         try:
-            await plugin.disconnect(account["account_id"])
+            await plugin.disconnect(
+                account["account_id"]
+            )
         except Exception:
             # Disconnect failures must not expose broker credentials or
             # provider internals. The account can still be removed.
@@ -335,7 +406,9 @@ async def remove_account(
     result = await db.broker_accounts.delete_one(
         {
             "user_id": user_id,
-            "account_id": account["account_id"],
+            "account_id": account[
+                "account_id"
+            ],
         }
     )
 
@@ -348,7 +421,11 @@ async def remove_account(
 
     await log_service.info(
         "broker",
-        f"Broker account removed: {account.get('plugin_id')}/{account['account_id']}",
+        (
+            "Broker account removed: "
+            f"{account.get('plugin_id')}/"
+            f"{account['account_id']}"
+        ),
         user_id=user_id,
     )
 
@@ -369,21 +446,32 @@ async def set_primary(
     user can never be modified.
     """
 
-    account = await _get_owned_account(user_id, account_id)
+    account = await _get_owned_account(
+        user_id,
+        account_id,
+    )
 
     db = get_db()
 
     # Clear the existing primary account for this user only.
     await db.broker_accounts.update_many(
-        {"user_id": user_id},
-        {"$set": {"is_primary": False}},
+        {
+            "user_id": user_id,
+        },
+        {
+            "$set": {
+                "is_primary": False,
+            }
+        },
     )
 
     # Set the requested account as primary, again scoped to the owner.
     await db.broker_accounts.update_one(
         {
             "user_id": user_id,
-            "account_id": account["account_id"],
+            "account_id": account[
+                "account_id"
+            ],
         },
         {
             "$set": {
@@ -395,160 +483,56 @@ async def set_primary(
 
     await log_service.info(
         "broker",
-        f"Primary broker account changed: {account.get('plugin_id')}/{account['account_id']}",
+        (
+            "Primary broker account changed: "
+            f"{account.get('plugin_id')}/"
+            f"{account['account_id']}"
+        ),
         user_id=user_id,
     )
-
-
-# ----------------------------------------------------------------------
-# Connect
+    # ----------------------------------------------------------------------
+# Connection lifecycle
 # ----------------------------------------------------------------------
 
 
-async def connect_account(
+async def _save_health(
     user_id: str,
     account_id: str,
-) -> dict[str, Any]:
+    ok: bool,
+    detail: str | None = None,
+    latency_ms: float | int | None = None,
+) -> None:
     """
-    Connect a stored broker account through its registered adapter.
+    Persist the latest broker health result.
 
-    Credentials are decrypted only for the adapter call.
+    Only non-sensitive operational information is stored.
     """
 
-    account = await _get_owned_account(user_id, account_id)
-    plugin = _require_plugin(account.get("plugin_id"))
+    db = get_db()
 
-    credentials = _decrypt_credentials(account)
-
-    try:
-        health = await plugin.connect(credentials)
-    except Exception as exc:
-        db = get_db()
-
-        await db.broker_accounts.update_one(
-            {
-                "user_id": user_id,
-                "account_id": account["account_id"],
-            },
-            {
-                "$set": {
-                    "status": "error",
-                    "last_health": {
-                        "ok": False,
-                        "detail": "Broker connection failed",
-                        "latency_ms": 0,
-                    },
-                    "updated_at": _utc_now(),
-                }
-            },
-        )
-
-        await log_service.error(
-            "broker",
-            f"Broker connection failed: {account.get('plugin_id')}/{account['account_id']}",
-            user_id=user_id,
-        )
-
-        raise AppError(
-            "BROKER_CONNECTION_FAILED",
-            status=502,
-            detail="Broker connection failed",
-        ) from exc
-
-    status = "connected" if health.ok else "error"
-
-    health_data = {
-        "ok": bool(health.ok),
-        "detail": str(health.detail or ""),
-        "latency_ms": int(health.latency_ms or 0),
+    health = {
+        "ok": bool(ok),
+        "detail": str(detail)
+        if detail is not None
+        else None,
         "checked_at": _utc_now(),
     }
 
-    db = get_db()
+    if latency_ms is not None:
+        health["latency_ms"] = latency_ms
 
     await db.broker_accounts.update_one(
         {
             "user_id": user_id,
-            "account_id": account["account_id"],
+            "account_id": account_id,
         },
         {
             "$set": {
-                "status": status,
-                "last_health": health_data,
+                "last_health": health,
                 "updated_at": _utc_now(),
             }
         },
     )
-
-    await log_service.info(
-        "broker",
-        f"Broker connection status: {account.get('plugin_id')}/{account['account_id']}={status}",
-        user_id=user_id,
-    )
-
-    return {
-        "ok": bool(health.ok),
-        "detail": health.detail,
-        "latency_ms": health.latency_ms,
-        "status": status,
-    }
-
-
-# ----------------------------------------------------------------------
-# Disconnect
-# ----------------------------------------------------------------------
-
-
-async def disconnect_account(
-    user_id: str,
-    account_id: str,
-) -> None:
-    """
-    Disconnect a broker account and persist disconnected state.
-
-    Provider disconnect failures are intentionally isolated so local
-    account state can still be marked disconnected.
-    """
-
-    account = await _get_owned_account(user_id, account_id)
-    plugin = broker_registry.get(account.get("plugin_id"))
-
-    if plugin:
-        try:
-            await plugin.disconnect(account["account_id"])
-        except Exception:
-            await log_service.warning(
-                "broker",
-                f"Broker disconnect returned an error: "
-                f"{account.get('plugin_id')}/{account['account_id']}",
-                user_id=user_id,
-            )
-
-    db = get_db()
-
-    await db.broker_accounts.update_one(
-        {
-            "user_id": user_id,
-            "account_id": account["account_id"],
-        },
-        {
-            "$set": {
-                "status": "disconnected",
-                "updated_at": _utc_now(),
-            }
-        },
-    )
-
-    await log_service.info(
-        "broker",
-        f"Broker account disconnected: {account.get('plugin_id')}/{account['account_id']}",
-        user_id=user_id,
-    )
-
-
-# ----------------------------------------------------------------------
-# Connection test
-# ----------------------------------------------------------------------
 
 
 async def test_connection(
@@ -556,42 +540,439 @@ async def test_connection(
     account_id: str,
 ) -> dict[str, Any]:
     """
-    Test broker connectivity without changing the stored account's
-    connection status.
+    Test the broker connection without changing the intended account state.
 
-    The adapter's connect() contract is used as the canonical test.
+    The plugin receives decrypted credentials internally.
+    Credential values never leave this service.
     """
 
-    account = await _get_owned_account(user_id, account_id)
-    plugin = _require_plugin(account.get("plugin_id"))
+    account = await _get_owned_account(
+        user_id,
+        account_id,
+    )
 
-    credentials = _decrypt_credentials(account)
+    plugin = _require_plugin(
+        account.get("plugin_id")
+    )
+
+    credentials = _decrypt_credentials(
+        account
+    )
+
+    started = datetime.now(
+        timezone.utc
+    )
 
     try:
-        health = await plugin.connect(credentials)
+        result = await plugin.test_connection(
+            credentials
+        )
+
+        elapsed = (
+            datetime.now(
+                timezone.utc
+            )
+            - started
+        ).total_seconds() * 1000
+
+        latency_ms = round(
+            elapsed,
+            2,
+        )
+
+        result = (
+            result
+            if isinstance(
+                result,
+                dict,
+            )
+            else {
+                "ok": bool(result),
+            }
+        )
+
+        ok = bool(
+            result.get(
+                "ok",
+                False,
+            )
+        )
+
+        detail = result.get(
+            "detail"
+        )
+
+        await _save_health(
+            user_id=user_id,
+            account_id=account_id,
+            ok=ok,
+            detail=detail,
+            latency_ms=latency_ms,
+        )
+
+        if ok:
+            await log_service.info(
+                "broker",
+                (
+                    "Broker connection test passed: "
+                    f"{account.get('plugin_id')}/"
+                    f"{account_id}"
+                ),
+                user_id=user_id,
+            )
+        else:
+            await log_service.warning(
+                "broker",
+                (
+                    "Broker connection test failed: "
+                    f"{account.get('plugin_id')}/"
+                    f"{account_id}"
+                ),
+                user_id=user_id,
+            )
+
+        return {
+            "ok": ok,
+            "detail": detail,
+            "latency_ms": latency_ms,
+        }
+
     except Exception as exc:
+        elapsed = (
+            datetime.now(
+                timezone.utc
+            )
+            - started
+        ).total_seconds() * 1000
+
+        latency_ms = round(
+            elapsed,
+            2,
+        )
+
+        await _save_health(
+            user_id=user_id,
+            account_id=account_id,
+            ok=False,
+            detail="Broker connection test failed",
+            latency_ms=latency_ms,
+        )
+
         await log_service.warning(
             "broker",
-            f"Broker connection test failed: "
-            f"{account.get('plugin_id')}/{account['account_id']}",
+            (
+                "Broker connection test failed: "
+                f"{account.get('plugin_id')}/"
+                f"{account_id}"
+            ),
+            user_id=user_id,
+        )
+
+        return {
+            "ok": False,
+            "detail": "Broker connection test failed",
+            "latency_ms": latency_ms,
+        }
+
+
+async def connect_account(
+    user_id: str,
+    account_id: str,
+) -> dict[str, Any]:
+    """
+    Establish a live broker session for an owned account.
+    """
+
+    account = await _get_owned_account(
+        user_id,
+        account_id,
+    )
+
+    plugin = _require_plugin(
+        account.get("plugin_id")
+    )
+
+    if account.get("status") == "connected":
+        return {
+            "ok": True,
+            "detail": "Already connected",
+            "latency_ms": 0,
+        }
+
+    db = get_db()
+
+    await db.broker_accounts.update_one(
+        {
+            "user_id": user_id,
+            "account_id": account_id,
+        },
+        {
+            "$set": {
+                "status": "connecting",
+                "updated_at": _utc_now(),
+            }
+        },
+    )
+
+    credentials = _decrypt_credentials(
+        account
+    )
+
+    started = datetime.now(
+        timezone.utc
+    )
+
+    try:
+        result = await plugin.connect(
+            account_id=account_id,
+            credentials=credentials,
+        )
+
+        elapsed = (
+            datetime.now(
+                timezone.utc
+            )
+            - started
+        ).total_seconds() * 1000
+
+        latency_ms = round(
+            elapsed,
+            2,
+        )
+
+        result = (
+            result
+            if isinstance(
+                result,
+                dict,
+            )
+            else {
+                "ok": bool(result),
+            }
+        )
+
+        ok = bool(
+            result.get(
+                "ok",
+                False,
+            )
+        )
+
+        detail = result.get(
+            "detail"
+        )
+
+        if not ok:
+            await db.broker_accounts.update_one(
+                {
+                    "user_id": user_id,
+                    "account_id": account_id,
+                },
+                {
+                    "$set": {
+                        "status": "error",
+                        "last_health": {
+                            "ok": False,
+                            "detail": detail
+                            or "Broker connection failed",
+                            "latency_ms": latency_ms,
+                            "checked_at": _utc_now(),
+                        },
+                        "updated_at": _utc_now(),
+                    }
+                },
+            )
+
+            return {
+                "ok": False,
+                "detail": detail
+                or "Broker connection failed",
+                "latency_ms": latency_ms,
+            }
+
+        await db.broker_accounts.update_one(
+            {
+                "user_id": user_id,
+                "account_id": account_id,
+            },
+            {
+                "$set": {
+                    "status": "connected",
+                    "last_health": {
+                        "ok": True,
+                        "detail": detail
+                        or "Connected",
+                        "latency_ms": latency_ms,
+                        "checked_at": _utc_now(),
+                    },
+                    "updated_at": _utc_now(),
+                }
+            },
+        )
+
+        await log_service.info(
+            "broker",
+            (
+                "Broker connected: "
+                f"{account.get('plugin_id')}/"
+                f"{account_id}"
+            ),
+            user_id=user_id,
+        )
+
+        return {
+            "ok": True,
+            "detail": detail
+            or "Connected",
+            "latency_ms": latency_ms,
+        }
+
+    except Exception as exc:
+        await db.broker_accounts.update_one(
+            {
+                "user_id": user_id,
+                "account_id": account_id,
+            },
+            {
+                "$set": {
+                    "status": "error",
+                    "last_health": {
+                        "ok": False,
+                        "detail": "Broker connection failed",
+                        "checked_at": _utc_now(),
+                    },
+                    "updated_at": _utc_now(),
+                }
+            },
+        )
+
+        await log_service.warning(
+            "broker",
+            (
+                "Broker connection failed: "
+                f"{account.get('plugin_id')}/"
+                f"{account_id}"
+            ),
+            user_id=user_id,
+        )
+
+        return {
+            "ok": False,
+            "detail": "Broker connection failed",
+        }
+
+
+async def disconnect_account(
+    user_id: str,
+    account_id: str,
+) -> dict[str, Any]:
+    """
+    Close a live broker session for an owned account.
+    """
+
+    account = await _get_owned_account(
+        user_id,
+        account_id,
+    )
+
+    plugin = _require_plugin(
+        account.get("plugin_id")
+    )
+
+    if account.get("status") != "connected":
+        return {
+            "ok": True,
+            "detail": "Already disconnected",
+        }
+
+    try:
+        result = await plugin.disconnect(
+            account_id
+        )
+
+        result = (
+            result
+            if isinstance(
+                result,
+                dict,
+            )
+            else {
+                "ok": bool(result),
+            }
+        )
+
+        ok = bool(
+            result.get(
+                "ok",
+                True,
+            )
+        )
+
+        detail = result.get(
+            "detail"
+        )
+
+        if not ok:
+            raise RuntimeError(
+                "Broker disconnect failed"
+            )
+
+    except Exception:
+        await log_service.warning(
+            "broker",
+            (
+                "Broker disconnect failed: "
+                f"{account.get('plugin_id')}/"
+                f"{account_id}"
+            ),
             user_id=user_id,
         )
 
         raise AppError(
-            "BROKER_CONNECTION_FAILED",
+            "BROKER_DISCONNECT_FAILED",
             status=502,
-            detail="Broker connection test failed",
-        ) from exc
+            detail="Unable to disconnect broker",
+        )
+
+    db = get_db()
+
+    await db.broker_accounts.update_one(
+        {
+            "user_id": user_id,
+            "account_id": account_id,
+        },
+        {
+            "$set": {
+                "status": "disconnected",
+                "last_health": {
+                    "ok": True,
+                    "detail": "Disconnected",
+                    "checked_at": _utc_now(),
+                },
+                "updated_at": _utc_now(),
+            }
+        },
+    )
+
+    await log_service.info(
+        "broker",
+        (
+            "Broker disconnected: "
+            f"{account.get('plugin_id')}/"
+            f"{account_id}"
+        ),
+        user_id=user_id,
+    )
 
     return {
-        "ok": bool(health.ok),
-        "detail": health.detail,
-        "latency_ms": health.latency_ms,
+        "ok": True,
+        "detail": detail
+        or "Disconnected",
     }
 
 
 # ----------------------------------------------------------------------
-# Account information
+# Safe account information
 # ----------------------------------------------------------------------
 
 
@@ -600,44 +981,105 @@ async def get_account_info(
     account_id: str,
 ) -> dict[str, Any]:
     """
-    Return broker account information supplied by the adapter.
+    Fetch broker account information for the UI.
 
-    Sensitive credential fields are filtered defensively before returning
-    anything to the caller.
+    The plugin may return operational/account information, but the service
+    removes sensitive credential fields before returning the result.
     """
 
-    account = await _get_owned_account(user_id, account_id)
-    plugin = _require_plugin(account.get("plugin_id"))
+    account = await _get_owned_account(
+        user_id,
+        account_id,
+    )
 
-    credentials = _decrypt_credentials(account)
+    plugin = _require_plugin(
+        account.get("plugin_id")
+    )
+
+    credentials = _decrypt_credentials(
+        account
+    )
 
     try:
-        info = await plugin.account_info(credentials)
+        result = await plugin.account_info(
+            credentials
+        )
     except Exception as exc:
         raise AppError(
             "BROKER_ACCOUNT_INFO_FAILED",
             status=502,
-            detail="Unable to retrieve broker account information",
+            detail="Unable to fetch broker account information",
         ) from exc
 
-    if not isinstance(info, dict):
-        return {}
+    if not isinstance(
+        result,
+        dict,
+    ):
+        result = {
+            "data": result,
+        }
 
-    blocked_keys = {
+    return redact_sensitive_payload(
+        result
+    )
+
+
+def redact_sensitive_payload(
+    value: Any,
+) -> Any:
+    """
+    Recursive server-side redaction for broker/plugin responses.
+
+    This is intentionally duplicated at the backend boundary even though
+    the frontend also redacts defensively.
+    """
+
+    if isinstance(
+        value,
+        list,
+    ):
+        return [
+            redact_sensitive_payload(
+                item
+            )
+            for item in value
+        ]
+
+    if not isinstance(
+        value,
+        dict,
+    ):
+        return value
+
+    sensitive_fragments = (
         "password",
         "secret",
         "token",
-        "api_secret",
         "api_key",
+        "apikey",
+        "authorization",
+        "credential",
+        "mpin",
+        "totp",
         "access_token",
         "refresh_token",
-        "authorization",
-        "credentials",
-        "credentials_encrypted",
-    }
+    )
 
-    return {
-        key: value
-        for key, value in info.items()
-        if str(key).lower() not in blocked_keys
-    }
+    output = {}
+
+    for key, item in value.items():
+        normalized = str(
+            key
+        ).lower()
+
+        if any(
+            fragment in normalized
+            for fragment in sensitive_fragments
+        ):
+            output[key] = "[REDACTED]"
+        else:
+            output[key] = redact_sensitive_payload(
+                item
+            )
+
+    return output
