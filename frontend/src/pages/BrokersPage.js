@@ -21,27 +21,30 @@ import { toast } from "sonner";
 import { api, formatApiError } from "@/lib/api";
 
 /*
- * Broker Manager
+ * Owner Trading — Broker Manager
  *
- * The page consumes only the universal Broker Core API.
+ * Stable frontend contract for the broker-core backend.
+ * The backend registry is the source of truth: only adapters registered
+ * by backend/modules/broker_plugins/bootstrap.py are displayed.
  *
- * Only adapters actually registered by the backend bootstrap layer
- * are displayed.
+ * Current deployment: Kotak Neo only.
+ * Future broker adapters can be enabled in backend bootstrap without
+ * changing this page, provided they implement BrokerPluginBase and
+ * expose safe plugin metadata.
  *
- * Current deployment:
- *   Kotak Neo only.
- *
- * Future broker adapters:
- *   They automatically appear here when their validated adapter is
- *   registered by backend/modules/broker_plugins/bootstrap.py.
+ * Credential policy:
+ * - Credentials are sent only to the backend.
+ * - Credentials are never written to localStorage/sessionStorage.
+ * - Credential values are never rendered after submission.
+ * - Account information is defensively redacted before display.
  */
 
 const BROKER_TEST_IDS = {
   root: "brokers-page",
   refresh: "brokers-refresh",
   plugins: "brokers-plugins",
-  addButton: (pluginId) => `broker-add-${pluginId}`,
   accounts: "brokers-accounts",
+  addButton: (pluginId) => `broker-add-${pluginId}`,
   connect: (accountId) => `broker-connect-${accountId}`,
   disconnect: (accountId) => `broker-disconnect-${accountId}`,
   test: (accountId) => `broker-test-${accountId}`,
@@ -97,38 +100,6 @@ function safeObject(value) {
   return value && typeof value === "object" ? value : {};
 }
 
-function credentialInputType(key) {
-  const normalized = String(key || "").toLowerCase();
-
-  if (
-    normalized.includes("password") ||
-    normalized.includes("secret") ||
-    normalized.includes("mpin") ||
-    normalized.includes("totp") ||
-    normalized.includes("token")
-  ) {
-    return "password";
-  }
-
-  return "text";
-}
-
-function credentialInputMode(key) {
-  const normalized = String(key || "").toLowerCase();
-
-  if (
-    normalized.includes("mobile") ||
-    normalized.includes("phone") ||
-    normalized.includes("totp") ||
-    normalized.includes("mpin") ||
-    normalized.includes("pin")
-  ) {
-    return "numeric";
-  }
-
-  return "text";
-}
-
 function statusMeta(status) {
   switch (String(status || "").toLowerCase()) {
     case "connected":
@@ -170,6 +141,30 @@ function displayCredentialLabel(key, labels) {
   );
 }
 
+function credentialInputType(key) {
+  const normalized = String(key || "").toLowerCase();
+
+  return normalized.includes("password") ||
+    normalized.includes("secret") ||
+    normalized.includes("token") ||
+    normalized.includes("mpin") ||
+    normalized.includes("totp")
+    ? "password"
+    : "text";
+}
+
+function credentialInputMode(key) {
+  const normalized = String(key || "").toLowerCase();
+
+  return normalized.includes("mobile") ||
+    normalized.includes("phone") ||
+    normalized.includes("totp") ||
+    normalized.includes("mpin") ||
+    normalized.includes("pin")
+    ? "numeric"
+    : "text";
+}
+
 function redactSensitiveInfo(value) {
   if (Array.isArray(value)) {
     return value.map(redactSensitiveInfo);
@@ -207,7 +202,6 @@ function redactSensitiveInfo(value) {
 export default function BrokersPage() {
   const [plugins, setPlugins] = useState([]);
   const [accounts, setAccounts] = useState([]);
-
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -226,41 +220,34 @@ export default function BrokersPage() {
     }));
   }, []);
 
-  const load = useCallback(
-    async (showRefreshState = false) => {
-      if (showRefreshState) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+  const load = useCallback(async (showRefreshState = false) => {
+    if (showRefreshState) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
 
-      try {
-        const [pluginResponse, accountResponse] =
-          await Promise.all([
-            api.get("/brokers/plugins"),
-            api.get("/brokers/accounts"),
-          ]);
+    try {
+      const [pluginResponse, accountResponse] =
+        await Promise.all([
+          api.get("/brokers/plugins"),
+          api.get("/brokers/accounts"),
+        ]);
 
-        setPlugins(
-          safeArray(
-            pluginResponse?.data?.plugins
-          )
-        );
+      setPlugins(
+        safeArray(pluginResponse?.data?.plugins)
+      );
 
-        setAccounts(
-          safeArray(
-            accountResponse?.data?.accounts
-          )
-        );
-      } catch (error) {
-        toast.error(formatApiError(error));
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    []
-  );
+      setAccounts(
+        safeArray(accountResponse?.data?.accounts)
+      );
+    } catch (error) {
+      toast.error(formatApiError(error));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     load(false);
@@ -365,30 +352,30 @@ export default function BrokersPage() {
             `/brokers/accounts/${account.account_id}/test`
           );
 
-      if (data?.ok) {
-        toast.success(
-          data.detail
-            ? `${data.detail} · ${data.latency_ms ?? 0}ms`
-            : `Connection OK · ${data.latency_ms ?? 0}ms`
-        );
-      } else {
-        toast.error(
-          data?.detail ||
-            "Connection test failed"
-        );
-      }
+        if (data?.ok) {
+          toast.success(
+            data.detail
+              ? `${data.detail} · ${data.latency_ms ?? 0}ms`
+              : `Connection OK · ${data.latency_ms ?? 0}ms`
+          );
+        } else {
+          toast.error(
+            data?.detail ||
+              "Connection test failed"
+          );
+        }
 
-      await load(true);
-    } catch (error) {
-      toast.error(
-        formatApiError(error)
-      );
-    } finally {
-      setBusy(key, false);
-    }
-  },
-  [busyMap, load, setBusy]
-);
+        await load(true);
+      } catch (error) {
+        toast.error(
+          formatApiError(error)
+        );
+      } finally {
+        setBusy(key, false);
+      }
+    },
+    [busyMap, load, setBusy]
+  );
 
   const doPrimary = useCallback(
     async (account) => {
@@ -410,28 +397,28 @@ export default function BrokersPage() {
             `/brokers/accounts/${account.account_id}/primary`
           );
 
-      if (data?.ok !== false) {
-        toast.success(
-          `Primary broker set to "${account.label}"`
-        );
+        if (data?.ok !== false) {
+          toast.success(
+            `Primary broker set to "${account.label}"`
+          );
 
-        await load(true);
-      } else {
+          await load(true);
+        } else {
+          toast.error(
+            data?.detail ||
+              "Unable to set primary broker"
+          );
+        }
+      } catch (error) {
         toast.error(
-          data?.detail ||
-            "Unable to set primary broker"
+          formatApiError(error)
         );
+      } finally {
+        setBusy(key, false);
       }
-    } catch (error) {
-      toast.error(
-        formatApiError(error)
-      );
-    } finally {
-      setBusy(key, false);
-    }
-  },
-  [busyMap, load, setBusy]
-);
+    },
+    [busyMap, load, setBusy]
+  );
 
   const doRemove = useCallback(
     async (account) => {
@@ -459,41 +446,41 @@ export default function BrokersPage() {
             `/brokers/accounts/${account.account_id}`
           );
 
-      if (data?.ok !== false) {
-        toast.success(
-          `Removed "${account.label}"`
-        );
+        if (data?.ok !== false) {
+          toast.success(
+            `Removed "${account.label}"`
+          );
 
-        await load(true);
+          await load(true);
 
-        if (
-          infoAccount?.account_id ===
-          account.account_id
-        ) {
-          setInfoAccount(null);
-          setInfoData(null);
+          if (
+            infoAccount?.account_id ===
+            account.account_id
+          ) {
+            setInfoAccount(null);
+            setInfoData(null);
+          }
+        } else {
+          toast.error(
+            data?.detail ||
+              "Unable to remove account"
+          );
         }
-      } else {
+      } catch (error) {
         toast.error(
-          data?.detail ||
-            "Unable to remove account"
+          formatApiError(error)
         );
+      } finally {
+        setBusy(key, false);
       }
-    } catch (error) {
-      toast.error(
-        formatApiError(error)
-      );
-    } finally {
-      setBusy(key, false);
-    }
-  },
-  [
-    busyMap,
-    infoAccount,
-    load,
-    setBusy,
-  ]
-);
+    },
+    [
+      busyMap,
+      infoAccount,
+      load,
+      setBusy,
+    ]
+  );
 
   const doInfo = useCallback(
     async (account) => {
@@ -740,8 +727,32 @@ export default function BrokersPage() {
         )}
       </section>
 
-        {accounts.length ===
-          0 ? (
+      <section
+        data-testid={
+          BROKER_TEST_IDS.accounts
+        }
+        className="border border-term-border bg-term-surface"
+      >
+        <header className="min-h-10 px-4 py-2 flex items-center justify-between border-b border-term-border">
+          <div>
+            <div className="font-mono text-[9px] text-term-muted uppercase tracking-wider">
+              broker.accounts
+            </div>
+
+            <div className="font-display text-[13px] font-bold">
+              Configured Accounts
+            </div>
+          </div>
+
+          <span className="font-mono text-[10px] text-term-muted">
+            {accounts.length} account
+            {accounts.length ===
+            1
+              ? ""
+              : "s"}
+          </span>
+        </header>
+        {accounts.length === 0 ? (
           <div className="p-6 font-mono text-[11px] text-term-muted">
             No accounts configured. Add an account from a registered
             broker above.
@@ -751,347 +762,218 @@ export default function BrokersPage() {
             <table className="w-full text-left min-w-[950px]">
               <thead className="border-b border-term-border bg-term-panel">
                 <tr className="font-mono text-[10px] text-term-muted uppercase">
-                  <th className="px-4 h-9">
-                    Label
-                  </th>
-
-                  <th className="px-4 h-9">
-                    Broker
-                  </th>
-
-                  <th className="px-4 h-9">
-                    Status
-                  </th>
-
-                  <th className="px-4 h-9">
-                    Last Health
-                  </th>
-
-                  <th className="px-4 h-9">
-                    Primary
-                  </th>
-
-                  <th className="px-4 h-9 text-right">
-                    Actions
-                  </th>
+                  <th className="px-4 h-9">Label</th>
+                  <th className="px-4 h-9">Broker</th>
+                  <th className="px-4 h-9">Status</th>
+                  <th className="px-4 h-9">Last Health</th>
+                  <th className="px-4 h-9">Primary</th>
+                  <th className="px-4 h-9 text-right">Actions</th>
                 </tr>
               </thead>
 
               <tbody>
-                {accounts.map(
-                  (account) => {
-                    const status =
-                      statusMeta(
-                        account.status
-                      );
+                {accounts.map((account) => {
+                  const status = statusMeta(account.status);
 
-                    const connecting =
-                      busyMap[
-                        `connect:${account.account_id}`
-                      ];
+                  const connecting =
+                    busyMap[`connect:${account.account_id}`];
 
-                    const disconnecting =
-                      busyMap[
-                        `disconnect:${account.account_id}`
-                      ];
+                  const disconnecting =
+                    busyMap[`disconnect:${account.account_id}`];
 
-                    const testing =
-                      busyMap[
-                        `test:${account.account_id}`
-                      ];
+                  const testing =
+                    busyMap[`test:${account.account_id}`];
 
-                    const makingPrimary =
-                      busyMap[
-                        `primary:${account.account_id}`
-                      ];
+                  const makingPrimary =
+                    busyMap[`primary:${account.account_id}`];
 
-                    const removing =
-                      busyMap[
-                        `remove:${account.account_id}`
-                      ];
+                  const removing =
+                    busyMap[`remove:${account.account_id}`];
 
-                    const health =
-                      account.last_health;
+                  const health = account.last_health;
 
-                    return (
-                      <tr
-                        key={
-                          account.account_id
-                        }
-                        className="border-b border-term-border/50 hover:bg-term-hover/40"
-                      >
-                        <td className="px-4 h-12">
-                          <div className="text-[12px] font-medium">
-                            {account.label ||
-                              "Unnamed account"}
+                  return (
+                    <tr
+                      key={account.account_id}
+                      className="border-b border-term-border/50 hover:bg-term-hover/40"
+                    >
+                      <td className="px-4 h-12">
+                        <div className="text-[12px] font-medium">
+                          {account.label || "Unnamed account"}
+                        </div>
+
+                        {account.created_at && (
+                          <div className="font-mono text-[9px] text-term-muted mt-0.5">
+                            {account.created_at}
                           </div>
+                        )}
+                      </td>
 
-                          {account.created_at && (
-                            <div className="font-mono text-[9px] text-term-muted mt-0.5">
-                              {account.created_at}
-                            </div>
-                          )}
-                        </td>
+                      <td className="px-4 h-12 font-mono text-[11px] text-term-secondary">
+                        {account.plugin_id || "—"}
+                      </td>
 
-                        <td className="px-4 h-12 font-mono text-[11px] text-term-secondary">
-                          {account.plugin_id ||
-                            "—"}
-                        </td>
-
-                        <td className="px-4 h-12">
+                      <td className="px-4 h-12">
+                        <span
+                          className={`font-mono text-[10px] uppercase ${status.className}`}
+                        >
                           <span
-                            className={`font-mono text-[10px] uppercase ${status.className}`}
-                          >
-                            <span
-                              className={`inline-block w-1.5 h-1.5 mr-1.5 ${status.dotClass}`}
-                            />
+                            className={`inline-block w-1.5 h-1.5 mr-1.5 ${status.dotClass}`}
+                          />
+                          {status.label}
+                        </span>
+                      </td>
 
-                            {status.label}
-                          </span>
-                        </td>
+                      <td className="px-4 h-12">
+                        {health ? (
+                          <div className="font-mono text-[10px]">
+                            <div
+                              className={
+                                health.ok
+                                  ? "text-term-success"
+                                  : "text-term-danger"
+                              }
+                            >
+                              {health.ok ? "OK" : "FAILED"}
 
-                        <td className="px-4 h-12">
-                          {health ? (
-                            <div className="font-mono text-[10px]">
-                              <div
-                                className={
-                                  health.ok
-                                    ? "text-term-success"
-                                    : "text-term-danger"
-                                }
-                              >
-                                {health.ok
-                                  ? "OK"
-                                  : "FAILED"}
-
-                                {health.latency_ms !==
-                                undefined
-                                  ? ` · ${health.latency_ms}ms`
-                                  : ""}
-                              </div>
-
-                              {health.detail && (
-                                <div className="text-term-secondary max-w-[260px] truncate">
-                                  {health.detail}
-                                </div>
-                              )}
+                              {health.latency_ms !== undefined
+                                ? ` · ${health.latency_ms}ms`
+                                : ""}
                             </div>
-                          ) : (
-                            <span className="font-mono text-[10px] text-term-muted">
-                              —
-                            </span>
-                          )}
-                        </td>
 
-                        <td className="px-4 h-12">
-                          {account.is_primary ? (
-                            <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase text-term-success">
-                              <Check
-                                size={9}
-                              />
-                              primary
-                            </span>
+                            {health.detail && (
+                              <div className="text-term-secondary max-w-[260px] truncate">
+                                {health.detail}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="font-mono text-[10px] text-term-muted">
+                            —
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="px-4 h-12">
+                        {account.is_primary ? (
+                          <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase text-term-success">
+                            <Check size={9} />
+                            primary
+                          </span>
+                        ) : (
+                          <button
+                            data-testid={BROKER_TEST_IDS.primary(
+                              account.account_id
+                            )}
+                            onClick={() => doPrimary(account)}
+                            disabled={Boolean(makingPrimary)}
+                            className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase text-term-secondary hover:border-term-accent hover:text-term-accent disabled:opacity-40"
+                          >
+                            {makingPrimary
+                              ? "setting..."
+                              : "set primary"}
+                          </button>
+                        )}
+                      </td>
+
+                      <td className="px-4 h-12">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {account.status === "connected" ? (
+                            <button
+                              data-testid={BROKER_TEST_IDS.disconnect(
+                                account.account_id
+                              )}
+                              onClick={() => doDisconnect(account)}
+                              disabled={Boolean(disconnecting)}
+                              className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-warning hover:text-term-warning disabled:opacity-40 flex items-center gap-1"
+                            >
+                              {disconnecting ? (
+                                <Loader2
+                                  size={10}
+                                  className="animate-spin"
+                                />
+                              ) : (
+                                <Radio size={10} />
+                              )}
+
+                              disconnect
+                            </button>
                           ) : (
                             <button
-                              data-testid={
-                                BROKER_TEST_IDS.primary(
-                                  account.account_id
-                                )
-                              }
-                              onClick={() =>
-                                doPrimary(
-                                  account
-                                )
-                              }
-                              disabled={
-                                Boolean(
-                                  makingPrimary
-                                )
-                              }
-                              className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase text-term-secondary hover:border-term-accent hover:text-term-accent disabled:opacity-40"
+                              data-testid={BROKER_TEST_IDS.connect(
+                                account.account_id
+                              )}
+                              onClick={() => doConnect(account)}
+                              disabled={Boolean(connecting)}
+                              className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-success hover:text-term-success disabled:opacity-40 flex items-center gap-1"
                             >
-                              {makingPrimary
-                                ? "setting..."
-                                : "set primary"}
+                              {connecting ? (
+                                <Loader2
+                                  size={10}
+                                  className="animate-spin"
+                                />
+                              ) : (
+                                <Wifi size={10} />
+                              )}
+
+                              connect
                             </button>
                           )}
-                        </td>
 
-                        <td className="px-4 h-12">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {account.status ===
-                            "connected" ? (
-                              <button
-                                data-testid={
-                                  BROKER_TEST_IDS.disconnect(
-                                    account.account_id
-                                  )
-                                }
-                                onClick={() =>
-                                  doDisconnect(
-                                    account
-                                  )
-                                }
-                                disabled={
-                                  Boolean(
-                                    disconnecting
-                                  )
-                                }
-                                className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-warning hover:text-term-warning disabled:opacity-40 flex items-center gap-1"
-                              >
-                                {disconnecting ? (
-                                  <Loader2
-                                    size={
-                                      10
-                                    }
-                                    className="animate-spin"
-                                  />
-                                ) : (
-                                  <Radio
-                                    size={
-                                      10
-                                    }
-                                  />
-                                )}
-
-                                disconnect
-                              </button>
+                          <button
+                            data-testid={BROKER_TEST_IDS.test(
+                              account.account_id
+                            )}
+                            onClick={() => doTest(account)}
+                            disabled={Boolean(testing)}
+                            className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-accent hover:text-term-accent disabled:opacity-40 flex items-center gap-1"
+                          >
+                            {testing ? (
+                              <Loader2
+                                size={10}
+                                className="animate-spin"
+                              />
                             ) : (
-                              <button
-                                data-testid={
-                                  BROKER_TEST_IDS.connect(
-                                    account.account_id
-                                  )
-                                }
-                                onClick={() =>
-                                  doConnect(
-                                    account
-                                  )
-                                }
-                                disabled={
-                                  Boolean(
-                                    connecting
-                                  )
-                                }
-                                className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-success hover:text-term-success disabled:opacity-40 flex items-center gap-1"
-                              >
-                                {connecting ? (
-                                  <Loader2
-                                    size={
-                                      10
-                                    }
-                                    className="animate-spin"
-                                  />
-                                ) : (
-                                  <Wifi
-                                    size={
-                                      10
-                                    }
-                                  />
-                                )}
-
-                                connect
-                              </button>
+                              <Zap size={10} />
                             )}
 
-                            <button
-                              data-testid={
-                                BROKER_TEST_IDS.test(
-                                  account.account_id
-                                )
-                              }
-                              onClick={() =>
-                                doTest(
-                                  account
-                                )
-                              }
-                              disabled={
-                                Boolean(
-                                  testing
-                                )
-                              }
-                              className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-accent hover:text-term-accent disabled:opacity-40 flex items-center gap-1"
-                            >
-                              {testing ? (
-                                <Loader2
-                                  size={
-                                    10
-                                  }
-                                  className="animate-spin"
-                                />
-                              ) : (
-                                <Zap
-                                  size={
-                                    10
-                                  }
-                                />
-                              )}
+                            test
+                          </button>
 
-                              test
-                            </button>
+                          <button
+                            data-testid={BROKER_TEST_IDS.info(
+                              account.account_id
+                            )}
+                            onClick={() => doInfo(account)}
+                            className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-accent hover:text-term-accent flex items-center gap-1"
+                          >
+                            <Info size={10} />
+                            info
+                          </button>
 
-                            <button
-                              data-testid={
-                                BROKER_TEST_IDS.info(
-                                  account.account_id
-                                )
-                              }
-                              onClick={() =>
-                                doInfo(
-                                  account
-                                )
-                              }
-                              className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-accent hover:text-term-accent flex items-center gap-1"
-                            >
-                              <Info
-                                size={
-                                  10
-                                }
+                          <button
+                            data-testid={BROKER_TEST_IDS.remove(
+                              account.account_id
+                            )}
+                            onClick={() => doRemove(account)}
+                            disabled={Boolean(removing)}
+                            className="h-7 w-7 border border-term-border font-mono text-[9px] hover:border-term-danger hover:text-term-danger disabled:opacity-40 flex items-center justify-center"
+                            title="Remove account"
+                          >
+                            {removing ? (
+                              <Loader2
+                                size={10}
+                                className="animate-spin"
                               />
-
-                              info
-                            </button>
-
-                            <button
-                              data-testid={
-                                BROKER_TEST_IDS.remove(
-                                  account.account_id
-                                )
-                              }
-                              onClick={() =>
-                                doRemove(
-                                  account
-                                )
-                              }
-                              disabled={
-                                Boolean(
-                                  removing
-                                )
-                              }
-                              className="h-7 w-7 border border-term-border font-mono text-[9px] hover:border-term-danger hover:text-term-danger disabled:opacity-40 flex items-center justify-center"
-                              title="Remove account"
-                            >
-                              {removing ? (
-                                <Loader2
-                                  size={
-                                    10
-                                  }
-                                  className="animate-spin"
-                                />
-                              ) : (
-                                <Trash2
-                                  size={
-                                    10
-                                  }
-                                />
-                              )}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  }
-                )}
+                            ) : (
+                              <Trash2 size={10} />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1100,37 +982,20 @@ export default function BrokersPage() {
 
       {infoAccount && (
         <AccountInfoModal
-          account={
-            infoAccount
-          }
+          account={infoAccount}
           data={infoData}
-          loading={
-            infoLoading
-          }
-          onClose={
-            closeInfo
-          }
+          loading={infoLoading}
+          onClose={closeInfo}
         />
       )}
 
       {modalPlugin && (
         <AddAccountModal
-          plugin={
-            modalPlugin
-          }
-          onClose={() =>
-            setModalPlugin(
-              null
-            )
-          }
+          plugin={modalPlugin}
+          onClose={() => setModalPlugin(null)}
           onCreated={async () => {
-            setModalPlugin(
-              null
-            );
-
-            await load(
-              true
-            );
+            setModalPlugin(null);
+            await load(true);
           }}
         />
       )}
@@ -1152,9 +1017,7 @@ function SummaryCell({
 
       <div
         className={`font-display text-xl font-bold mt-1 truncate ${valueClassName}`}
-        title={String(
-          value ?? ""
-        )}
+        title={String(value ?? "")}
       >
         {value}
       </div>
@@ -1190,17 +1053,13 @@ function BrokerGroup({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {plugins.map(
-          (plugin) => (
-            <BrokerCard
-              key={
-                plugin.plugin_id
-              }
-              plugin={plugin}
-              onAdd={onAdd}
-            />
-          )
-        )}
+        {plugins.map((plugin) => (
+          <BrokerCard
+            key={plugin.plugin_id}
+            plugin={plugin}
+            onAdd={onAdd}
+          />
+        ))}
       </div>
     </div>
   );
@@ -1211,29 +1070,20 @@ function BrokerCard({
   onAdd,
 }) {
   const category =
-    CATEGORY_META[
-      plugin.category
-    ] ||
+    CATEGORY_META[plugin.category] ||
     DEFAULT_CATEGORY;
 
-  const CategoryIcon =
-    category.icon;
+  const CategoryIcon = category.icon;
 
   const credentials =
-    safeArray(
-      plugin.required_credentials
-    );
+    safeArray(plugin.required_credentials);
 
   const capabilities =
-    safeObject(
-      plugin.capabilities
-    );
+    safeObject(plugin.capabilities);
 
   const implementedCapabilities =
     CAPABILITY_LABELS.filter(
-      ([key]) =>
-        capabilities[key] ===
-        true
+      ([key]) => capabilities[key] === true
     );
 
   return (
@@ -1243,9 +1093,7 @@ function BrokerCard({
           <div className="flex items-center gap-2">
             <CategoryIcon
               size={13}
-              className={
-                category.className
-              }
+              className={category.className}
             />
 
             <div className="font-display text-[14px] font-bold truncate">
@@ -1257,8 +1105,7 @@ function BrokerCard({
           <div className="font-mono text-[9px] text-term-muted mt-1 truncate">
             {plugin.plugin_id}
             {" · "}
-            v{plugin.version ||
-              "—"}
+            v{plugin.version || "—"}
           </div>
         </div>
 
@@ -1286,9 +1133,7 @@ function BrokerCard({
           </div>
 
           <div className="font-mono text-[10px] text-term-text mt-0.5">
-            {
-              implementedCapabilities.length
-            }
+            {implementedCapabilities.length}
           </div>
         </div>
       </div>
@@ -1325,19 +1170,17 @@ function BrokerCard({
 
         {credentials.length ? (
           <div className="flex flex-wrap gap-1">
-            {credentials.map(
-              (key) => (
-                <span
-                  key={key}
-                  className="border border-term-border/60 px-1.5 py-0.5 font-mono text-[8px] text-term-secondary"
-                >
-                  {displayCredentialLabel(
-                    key,
-                    plugin.credential_labels
-                  )}
-                </span>
-              )
-            )}
+            {credentials.map((key) => (
+              <span
+                key={key}
+                className="border border-term-border/60 px-1.5 py-0.5 font-mono text-[8px] text-term-secondary"
+              >
+                {displayCredentialLabel(
+                  key,
+                  plugin.credential_labels
+                )}
+              </span>
+            ))}
           </div>
         ) : (
           <span className="font-mono text-[9px] text-term-muted">
@@ -1347,14 +1190,10 @@ function BrokerCard({
       </div>
 
       <button
-        data-testid={
-          BROKER_TEST_IDS.addButton(
-            plugin.plugin_id
-          )
-        }
-        onClick={() =>
-          onAdd(plugin)
-        }
+        data-testid={BROKER_TEST_IDS.addButton(
+          plugin.plugin_id
+        )}
+        onClick={() => onAdd(plugin)}
         className="mt-4 w-full h-8 border border-term-border font-mono text-[10px] uppercase hover:border-term-accent hover:text-term-accent flex items-center justify-center gap-2"
       >
         <Plus size={11} />
@@ -1362,47 +1201,34 @@ function BrokerCard({
       </button>
     </div>
   );
-                }
+          }
 function AddAccountModal({
   plugin,
   onClose,
   onCreated,
 }) {
-  const [label, setLabel] =
-    useState("");
+  const [label, setLabel] = useState("");
+  const [credentials, setCredentials] = useState({});
+  const [visible, setVisible] = useState({});
+  const [busy, setBusy] = useState(false);
 
-  const [credentials, setCredentials] =
-    useState({});
+  const requiredCredentials = safeArray(
+    plugin?.required_credentials
+  );
 
-  const [visible, setVisible] =
-    useState({});
-
-  const [busy, setBusy] =
-    useState(false);
-
-  const requiredCredentials =
-    safeArray(
-      plugin?.required_credentials
-    );
-
-  const credentialLabels =
-    safeObject(
-      plugin?.credential_labels
-    );
+  const credentialLabels = safeObject(
+    plugin?.credential_labels
+  );
 
   useEffect(() => {
     const initial = {};
 
-    requiredCredentials.forEach(
-      (key) => {
-        initial[key] = "";
-      }
-    );
+    requiredCredentials.forEach((key) => {
+      initial[key] = "";
+    });
 
     setLabel("");
-    setCredentials(
-      initial
-    );
+    setCredentials(initial);
     setVisible({});
   }, [plugin]);
 
@@ -1410,55 +1236,40 @@ function AddAccountModal({
     return null;
   }
 
-  const updateCredential = (
-    key,
-    value
-  ) => {
-    setCredentials(
-      (current) => ({
-        ...current,
-        [key]: value,
-      })
-    );
+  const updateCredential = (key, value) => {
+    setCredentials((current) => ({
+      ...current,
+      [key]: value,
+    }));
   };
 
-  const submit = async (
-    event
-  ) => {
+  const submit = async (event) => {
     event.preventDefault();
 
     if (busy) {
       return;
     }
 
-    const cleanLabel =
-      label.trim();
+    const cleanLabel = label.trim();
 
     if (!cleanLabel) {
-      toast.error(
-        "Account label is required"
-      );
+      toast.error("Account label is required");
       return;
     }
 
-    const missing =
-      requiredCredentials.filter(
-        (key) =>
-          !String(
-            credentials[key] ??
-              ""
-          ).trim()
-      );
+    const missing = requiredCredentials.filter(
+      (key) =>
+        !String(credentials[key] ?? "").trim()
+    );
 
     if (missing.length) {
       toast.error(
         `Missing: ${missing
-          .map(
-            (key) =>
-              displayCredentialLabel(
-                key,
-                credentialLabels
-              )
+          .map((key) =>
+            displayCredentialLabel(
+              key,
+              credentialLabels
+            )
           )
           .join(", ")}`
       );
@@ -1469,17 +1280,14 @@ function AddAccountModal({
     setBusy(true);
 
     try {
-      const { data } =
-        await api.post(
-          "/brokers/accounts",
-          {
-            plugin_id:
-              plugin.plugin_id,
-            label:
-              cleanLabel,
-            credentials,
-          }
-        );
+      const { data } = await api.post(
+        "/brokers/accounts",
+        {
+          plugin_id: plugin.plugin_id,
+          label: cleanLabel,
+          credentials,
+        }
+      );
 
       toast.success(
         data?.account_id
@@ -1500,9 +1308,7 @@ function AddAccountModal({
 
   return (
     <div
-      data-testid={
-        BROKER_TEST_IDS.modal
-      }
+      data-testid={BROKER_TEST_IDS.modal}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
@@ -1511,8 +1317,7 @@ function AddAccountModal({
       <div
         className="absolute inset-0 bg-black/70"
         onClick={() =>
-          !busy &&
-          onClose?.()
+          !busy && onClose?.()
         }
       />
 
@@ -1535,8 +1340,7 @@ function AddAccountModal({
             <div className="font-mono text-[9px] text-term-muted mt-1">
               {plugin.plugin_id}
               {" · v"}
-              {plugin.version ||
-                "—"}
+              {plugin.version || "—"}
             </div>
           </div>
 
@@ -1545,12 +1349,8 @@ function AddAccountModal({
             data-testid={
               BROKER_TEST_IDS.modalClose
             }
-            onClick={
-              onClose
-            }
-            disabled={
-              busy
-            }
+            onClick={onClose}
+            disabled={busy}
             aria-label="Close"
             className="h-7 w-7 border border-term-border flex items-center justify-center hover:border-term-danger hover:text-term-danger disabled:opacity-40"
           >
@@ -1595,12 +1395,8 @@ function AddAccountModal({
                 BROKER_TEST_IDS.modalLabel
               }
               value={label}
-              onChange={(
-                event
-              ) =>
-                setLabel(
-                  event.target.value
-                )
+              onChange={(event) =>
+                setLabel(event.target.value)
               }
               maxLength={64}
               disabled={busy}
@@ -1615,140 +1411,103 @@ function AddAccountModal({
               broker credentials
             </div>
 
-            {requiredCredentials.length ===
-            0 ? (
+            {requiredCredentials.length === 0 ? (
               <div className="border border-term-border/60 p-3 font-mono text-[10px] text-term-muted">
                 This broker does not require additional credentials.
               </div>
             ) : (
-              requiredCredentials.map(
-                (key) => {
-                  const secret =
-                    credentialInputType(
-                      key
-                    ) ===
-                    "password";
+              requiredCredentials.map((key) => {
+                const secret =
+                  credentialInputType(key) ===
+                  "password";
 
-                  const isVisible =
-                    Boolean(
-                      visible[key]
-                    );
+                const isVisible =
+                  Boolean(visible[key]);
 
-                  const labelText =
-                    displayCredentialLabel(
-                      key,
-                      credentialLabels
-                    );
+                const labelText =
+                  displayCredentialLabel(
+                    key,
+                    credentialLabels
+                  );
 
-                  return (
-                    <div
-                      key={key}
+                return (
+                  <div key={key}>
+                    <label
+                      htmlFor={`broker-credential-${key}`}
+                      className="block font-mono text-[9px] text-term-muted uppercase mb-1.5"
                     >
-                      <label
-                        htmlFor={`broker-credential-${key}`}
-                        className="block font-mono text-[9px] text-term-muted uppercase mb-1.5"
-                      >
-                        {
-                          labelText
-                        }
-                      </label>
+                      {labelText}
+                    </label>
 
-                      <div className="relative">
-                        <input
-                          id={`broker-credential-${key}`}
-                          data-testid={BROKER_TEST_IDS.modalCredential(
+                    <div className="relative">
+                      <input
+                        id={`broker-credential-${key}`}
+                        data-testid={
+                          BROKER_TEST_IDS.modalCredential(
                             key
-                          )}
-                          type={
-                            secret &&
-                            !isVisible
-                              ? "password"
-                              : "text"
-                          }
-                          inputMode={credentialInputMode(
-                            key
-                          )}
-                          autoComplete="off"
-                          value={
-                            credentials[
-                              key
-                            ] ||
-                            ""
-                          }
-                          onChange={(
-                            event
-                          ) =>
-                            updateCredential(
-                              key,
-                              event
-                                .target
-                                .value
+                          )
+                        }
+                        type={
+                          secret && !isVisible
+                            ? "password"
+                            : "text"
+                        }
+                        inputMode={credentialInputMode(
+                          key
+                        )}
+                        autoComplete="off"
+                        value={
+                          credentials[key] ||
+                          ""
+                        }
+                        onChange={(event) =>
+                          updateCredential(
+                            key,
+                            event.target.value
+                          )
+                        }
+                        disabled={busy}
+                        placeholder={labelText}
+                        className={`w-full h-9 ${
+                          secret ? "pr-10" : ""
+                        } px-3 bg-term-panel border border-term-border font-mono text-[11px] text-term-text focus:border-term-accent focus:outline-none disabled:opacity-50`}
+                      />
+
+                      {secret && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setVisible(
+                              (current) => ({
+                                ...current,
+                                [key]:
+                                  !current[key],
+                              })
                             )
                           }
-                          disabled={
-                            busy
+                          disabled={busy}
+                          aria-label={
+                            isVisible
+                              ? `Hide ${labelText}`
+                              : `Show ${labelText}`
                           }
-                          placeholder={
-                            labelText
-                          }
-                          className={`w-full h-9 ${
-                            secret
-                              ? "pr-10"
-                              : ""
-                          } px-3 bg-term-panel border border-term-border font-mono text-[11px] text-term-text focus:border-term-accent focus:outline-none disabled:opacity-50`}
-                        />
-
-                        {secret && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setVisible(
-                                (
-                                  current
-                                ) => ({
-                                  ...current,
-                                  [key]:
-                                    !current[
-                                      key
-                                    ],
-                                })
-                              )
-                            }
-                            disabled={
-                              busy
-                            }
-                            aria-label={
-                              isVisible
-                                ? `Hide ${labelText}`
-                                : `Show ${labelText}`
-                            }
-                            className="absolute right-0 top-0 h-9 w-9 flex items-center justify-center text-term-muted hover:text-term-text disabled:opacity-40"
-                          >
-                            {isVisible ? (
-                              <EyeOff
-                                size={
-                                  12
-                                }
-                              />
-                            ) : (
-                              <Eye
-                                size={
-                                  12
-                                }
-                              />
-                            )}
-                          </button>
-                        )}
-                      </div>
+                          className="absolute right-0 top-0 h-9 w-9 flex items-center justify-center text-term-muted hover:text-term-text disabled:opacity-40"
+                        >
+                          {isVisible ? (
+                            <EyeOff size={12} />
+                          ) : (
+                            <Eye size={12} />
+                          )}
+                        </button>
+                      )}
                     </div>
-                  );
-                }
-              )
+                  </div>
+                );
+              })
             )}
           </div>
 
-          {plugin.plugin_id ===
-            "kotak_neo" && (
+          {plugin.plugin_id === "kotak_neo" && (
             <div className="border border-term-accent/30 bg-term-accent/5 p-3">
               <div className="flex items-start gap-2">
                 <Info
@@ -1767,12 +1526,8 @@ function AddAccountModal({
 
           <div className="pt-2 flex items-center justify-between gap-3 border-t border-term-border">
             <div className="font-mono text-[9px] text-term-muted">
-              {
-                requiredCredentials.length
-              }{" "}
-              credential
-              {requiredCredentials.length ===
-              1
+              {requiredCredentials.length} credential
+              {requiredCredentials.length === 1
                 ? ""
                 : "s"}{" "}
               required
@@ -1781,12 +1536,8 @@ function AddAccountModal({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={
-                  onClose
-                }
-                disabled={
-                  busy
-                }
+                onClick={onClose}
+                disabled={busy}
                 className="h-9 px-3 border border-term-border font-mono text-[10px] uppercase hover:border-term-danger hover:text-term-danger disabled:opacity-40"
               >
                 cancel
@@ -1803,10 +1554,7 @@ function AddAccountModal({
                   requiredCredentials.some(
                     (key) =>
                       !String(
-                        credentials[
-                          key
-                        ] ??
-                          ""
+                        credentials[key] ?? ""
                       ).trim()
                   )
                 }
@@ -1831,8 +1579,7 @@ function AddAccountModal({
       </div>
     </div>
   );
-}
-
+          }
 function AccountInfoModal({
   account,
   data,
@@ -1841,9 +1588,7 @@ function AccountInfoModal({
 }) {
   return (
     <div
-      data-testid={
-        BROKER_TEST_IDS.infoPanel
-      }
+      data-testid={BROKER_TEST_IDS.infoPanel}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
@@ -1879,9 +1624,7 @@ function AccountInfoModal({
             data-testid={
               BROKER_TEST_IDS.infoClose
             }
-            onClick={
-              onClose
-            }
+            onClick={onClose}
             className="h-7 w-7 border border-term-border flex items-center justify-center hover:border-term-accent hover:text-term-accent"
             aria-label="Close"
           >
@@ -1902,18 +1645,14 @@ function AccountInfoModal({
             <div className="space-y-3">
               <pre className="border border-term-border/60 bg-term-panel p-4 overflow-x-auto font-mono text-[10px] leading-5 text-term-secondary whitespace-pre-wrap break-words">
                 {JSON.stringify(
-                  redactSensitiveInfo(
-                    data
-                  ),
+                  redactSensitiveInfo(data),
                   null,
                   2
                 )}
               </pre>
 
               <div className="font-mono text-[9px] text-term-muted flex items-center gap-1">
-                <ShieldCheck
-                  size={10}
-                />
+                <ShieldCheck size={10} />
                 Sensitive credential material is redacted.
               </div>
             </div>
@@ -1926,4 +1665,4 @@ function AccountInfoModal({
       </div>
     </div>
   );
-}
+        }
