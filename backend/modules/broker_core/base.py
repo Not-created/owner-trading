@@ -363,4 +363,90 @@ class BrokerPluginBase(ABC):
                 "holdings": cls.capabilities.holdings,
                 "trade_history": cls.capabilities.trade_history,
             },
-    }
+        }
+                  ok=False,
+            status="unsupported",
+            message="Holdings capability is not implemented by this broker adapter.",
+        )
+
+    async def get_trade_history(
+        self,
+        account_id: str,
+        request: Mapping[str, Any] | None = None,
+    ) -> BrokerOperationResult:
+        """Retrieve trade history when supported."""
+        return BrokerOperationResult(
+            ok=False,
+            status="unsupported",
+            message="Trade-history capability is not implemented by this broker adapter.",
+        )
+
+    # ------------------------------------------------------------------
+    # Credential validation
+    # ------------------------------------------------------------------
+
+    def validate_credentials(
+        self,
+        credentials: Mapping[str, Any] | None,
+    ) -> list[str]:
+        """
+        Return required credential keys that are missing.
+
+        This performs presence validation only.
+
+        Broker-specific validation belongs inside the adapter.
+        Secrets are never included in the returned list.
+        """
+
+        if not credentials:
+            return list(self.required_credentials)
+
+        return [
+            key
+            for key in self.required_credentials
+            if not credentials.get(key)
+        ]
+
+    # ------------------------------------------------------------------
+    # Capability helpers
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def supports(cls, capability: str) -> bool:
+        """
+        Safely check whether this adapter declares a capability.
+
+        Unknown capability names return False rather than raising.
+        """
+
+        value = getattr(cls.capabilities, capability, False)
+        return bool(value)
+
+    @classmethod
+    def metadata(cls) -> dict[str, Any]:
+        """
+        Return safe broker metadata for Broker Manager/UI/registry.
+
+        No credentials or runtime secrets are returned.
+        """
+
+        return {
+            "plugin_id": cls.plugin_id,
+            "display_name": cls.display_name,
+            "version": cls.version,
+            "category": cls.category,
+            "required_credentials": list(cls.required_credentials),
+            "credential_labels": dict(cls.credential_labels),
+            "capabilities": {
+                "account_info": cls.capabilities.account_info,
+                "funds": cls.capabilities.funds,
+                "market_data": cls.capabilities.market_data,
+                "order_place": cls.capabilities.order_place,
+                "order_modify": cls.capabilities.order_modify,
+                "order_cancel": cls.capabilities.order_cancel,
+                "order_status": cls.capabilities.order_status,
+                "positions": cls.capabilities.positions,
+                "holdings": cls.capabilities.holdings,
+                "trade_history": cls.capabilities.trade_history,
+            },
+}
