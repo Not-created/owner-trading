@@ -71,7 +71,9 @@ class AddAccountBody(BaseModel):
 # ----------------------------------------------------------------------
 
 
-def _user_id(user: dict[str, Any]) -> str:
+def _user_id(
+    user: dict[str, Any],
+) -> str:
     """
     Extract the authenticated user's stable ID.
 
@@ -81,9 +83,9 @@ def _user_id(user: dict[str, Any]) -> str:
     value = user.get("_id")
 
     if value is None:
-        # This should never happen for a valid authenticated user,
-        # but avoids silently operating without an ownership boundary.
-        raise ValueError("Authenticated user has no ID")
+        raise ValueError(
+            "Authenticated user has no ID"
+        )
 
     return str(value)
 
@@ -95,7 +97,9 @@ def _user_id(user: dict[str, Any]) -> str:
 
 @router.get("/plugins")
 async def plugins(
-    user: dict[str, Any] = Depends(get_current_user),
+    user: dict[str, Any] = Depends(
+        get_current_user
+    ),
 ) -> dict[str, list[dict[str, Any]]]:
     """
     Return safe metadata for installed broker plugins.
@@ -103,7 +107,7 @@ async def plugins(
     No broker credentials or secrets are returned.
     """
 
-    _ = _user_id(user)
+    _user_id(user)
 
     return {
         "plugins": await svc.list_plugins(),
@@ -117,7 +121,9 @@ async def plugins(
 
 @router.get("/accounts")
 async def accounts(
-    user: dict[str, Any] = Depends(get_current_user),
+    user: dict[str, Any] = Depends(
+        get_current_user
+    ),
 ) -> dict[str, list[dict[str, Any]]]:
     """
     Return broker accounts belonging to the authenticated user.
@@ -126,14 +132,18 @@ async def accounts(
     """
 
     return {
-        "accounts": await svc.list_accounts(_user_id(user)),
+        "accounts": await svc.list_accounts(
+            _user_id(user)
+        ),
     }
 
 
 @router.post("/accounts")
 async def add_account(
     body: AddAccountBody,
-    user: dict[str, Any] = Depends(get_current_user),
+    user: dict[str, Any] = Depends(
+        get_current_user
+    ),
 ) -> dict[str, Any]:
     """
     Create a broker account.
@@ -150,10 +160,14 @@ async def add_account(
     )
 
 
-@router.delete("/accounts/{account_id}")
+@router.delete(
+    "/accounts/{account_id}"
+)
 async def remove_account(
     account_id: str,
-    user: dict[str, Any] = Depends(get_current_user),
+    user: dict[str, Any] = Depends(
+        get_current_user
+    ),
 ) -> dict[str, bool]:
     """
     Remove an authenticated user's broker account.
@@ -166,7 +180,9 @@ async def remove_account(
         account_id,
     )
 
-    return {"ok": True}
+    return {
+        "ok": True,
+    }
 
 
 # ----------------------------------------------------------------------
@@ -174,10 +190,14 @@ async def remove_account(
 # ----------------------------------------------------------------------
 
 
-@router.post("/accounts/{account_id}/primary")
+@router.post(
+    "/accounts/{account_id}/primary"
+)
 async def make_primary(
     account_id: str,
-    user: dict[str, Any] = Depends(get_current_user),
+    user: dict[str, Any] = Depends(
+        get_current_user
+    ),
 ) -> dict[str, bool]:
     """
     Make one of the authenticated user's broker accounts primary.
@@ -188,7 +208,9 @@ async def make_primary(
         account_id,
     )
 
-    return {"ok": True}
+    return {
+        "ok": True,
+    }
 
 
 # ----------------------------------------------------------------------
@@ -196,10 +218,14 @@ async def make_primary(
 # ----------------------------------------------------------------------
 
 
-@router.post("/accounts/{account_id}/connect")
+@router.post(
+    "/accounts/{account_id}/connect"
+)
 async def connect(
     account_id: str,
-    user: dict[str, Any] = Depends(get_current_user),
+    user: dict[str, Any] = Depends(
+        get_current_user
+    ),
 ) -> dict[str, Any]:
     """
     Connect a stored broker account through its registered adapter.
@@ -211,10 +237,14 @@ async def connect(
     )
 
 
-@router.post("/accounts/{account_id}/disconnect")
+@router.post(
+    "/accounts/{account_id}/disconnect"
+)
 async def disconnect(
     account_id: str,
-    user: dict[str, Any] = Depends(get_current_user),
+    user: dict[str, Any] = Depends(
+        get_current_user
+    ),
 ) -> dict[str, bool]:
     """
     Disconnect a stored broker account.
@@ -225,16 +255,22 @@ async def disconnect(
         account_id,
     )
 
-    return {"ok": True}
+    return {
+        "ok": True,
+    }
 
 
-@router.post("/accounts/{account_id}/test")
+@router.post(
+    "/accounts/{account_id}/test"
+)
 async def test_connection(
     account_id: str,
-    user: dict[str, Any] = Depends(get_current_user),
+    user: dict[str, Any] = Depends(
+        get_current_user
+    ),
 ) -> dict[str, Any]:
     """
-    Test broker connectivity without changing the persisted account
+    Test broker connectivity without changing the stored account
     connection status.
     """
 
@@ -249,10 +285,14 @@ async def test_connection(
 # ----------------------------------------------------------------------
 
 
-@router.get("/accounts/{account_id}/info")
+@router.get(
+    "/accounts/{account_id}/info"
+)
 async def account_info(
     account_id: str,
-    user: dict[str, Any] = Depends(get_current_user),
+    user: dict[str, Any] = Depends(
+        get_current_user
+    ),
 ) -> dict[str, Any]:
     """
     Return safe broker account information.
