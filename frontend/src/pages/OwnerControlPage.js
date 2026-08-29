@@ -662,10 +662,13 @@ function ModulesTab({ refreshKey }) {
         </div>
       )}
     </Panel>
+  );
+}
+
+
 /* ------------------------------------------------------------------ */
 /* DB schema                                                          */
 /* ------------------------------------------------------------------ */
-
 function SchemaTab({ refreshKey }) {
   const [collections, setCollections] = useState([]);
 
@@ -1189,6 +1192,8 @@ function ApprovalsTab({ refreshKey }) {
           </div>
         </div>
       </Panel>
+
+
       <Panel
         title="Pending & recent approvals"
         subtitle="dev.approvals"
@@ -1430,7 +1435,4 @@ function ErrorState({
       </div>
     </div>
   );
-                }
-
-  )
-}
+        }
