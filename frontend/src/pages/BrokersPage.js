@@ -739,3 +739,627 @@ export default function BrokersPage() {
           </div>
         )}
       </section>
+
+        {accounts.length ===
+          0 ? (
+          <div className="p-6 font-mono text-[11px] text-term-muted">
+            No accounts configured. Add an account from a registered
+            broker above.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left min-w-[950px]">
+              <thead className="border-b border-term-border bg-term-panel">
+                <tr className="font-mono text-[10px] text-term-muted uppercase">
+                  <th className="px-4 h-9">
+                    Label
+                  </th>
+
+                  <th className="px-4 h-9">
+                    Broker
+                  </th>
+
+                  <th className="px-4 h-9">
+                    Status
+                  </th>
+
+                  <th className="px-4 h-9">
+                    Last Health
+                  </th>
+
+                  <th className="px-4 h-9">
+                    Primary
+                  </th>
+
+                  <th className="px-4 h-9 text-right">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {accounts.map(
+                  (account) => {
+                    const status =
+                      statusMeta(
+                        account.status
+                      );
+
+                    const connecting =
+                      busyMap[
+                        `connect:${account.account_id}`
+                      ];
+
+                    const disconnecting =
+                      busyMap[
+                        `disconnect:${account.account_id}`
+                      ];
+
+                    const testing =
+                      busyMap[
+                        `test:${account.account_id}`
+                      ];
+
+                    const makingPrimary =
+                      busyMap[
+                        `primary:${account.account_id}`
+                      ];
+
+                    const removing =
+                      busyMap[
+                        `remove:${account.account_id}`
+                      ];
+
+                    const health =
+                      account.last_health;
+
+                    return (
+                      <tr
+                        key={
+                          account.account_id
+                        }
+                        className="border-b border-term-border/50 hover:bg-term-hover/40"
+                      >
+                        <td className="px-4 h-12">
+                          <div className="text-[12px] font-medium">
+                            {account.label ||
+                              "Unnamed account"}
+                          </div>
+
+                          {account.created_at && (
+                            <div className="font-mono text-[9px] text-term-muted mt-0.5">
+                              {account.created_at}
+                            </div>
+                          )}
+                        </td>
+
+                        <td className="px-4 h-12 font-mono text-[11px] text-term-secondary">
+                          {account.plugin_id ||
+                            "—"}
+                        </td>
+
+                        <td className="px-4 h-12">
+                          <span
+                            className={`font-mono text-[10px] uppercase ${status.className}`}
+                          >
+                            <span
+                              className={`inline-block w-1.5 h-1.5 mr-1.5 ${status.dotClass}`}
+                            />
+
+                            {status.label}
+                          </span>
+                        </td>
+
+                        <td className="px-4 h-12">
+                          {health ? (
+                            <div className="font-mono text-[10px]">
+                              <div
+                                className={
+                                  health.ok
+                                    ? "text-term-success"
+                                    : "text-term-danger"
+                                }
+                              >
+                                {health.ok
+                                  ? "OK"
+                                  : "FAILED"}
+
+                                {health.latency_ms !==
+                                undefined
+                                  ? ` · ${health.latency_ms}ms`
+                                  : ""}
+                              </div>
+
+                              {health.detail && (
+                                <div className="text-term-secondary max-w-[260px] truncate">
+                                  {health.detail}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="font-mono text-[10px] text-term-muted">
+                              —
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-4 h-12">
+                          {account.is_primary ? (
+                            <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase text-term-success">
+                              <Check
+                                size={9}
+                              />
+                              primary
+                            </span>
+                          ) : (
+                            <button
+                              data-testid={
+                                BROKER_TEST_IDS.primary(
+                                  account.account_id
+                                )
+                              }
+                              onClick={() =>
+                                doPrimary(
+                                  account
+                                )
+                              }
+                              disabled={
+                                Boolean(
+                                  makingPrimary
+                                )
+                              }
+                              className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase text-term-secondary hover:border-term-accent hover:text-term-accent disabled:opacity-40"
+                            >
+                              {makingPrimary
+                                ? "setting..."
+                                : "set primary"}
+                            </button>
+                          )}
+                        </td>
+
+                        <td className="px-4 h-12">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {account.status ===
+                            "connected" ? (
+                              <button
+                                data-testid={
+                                  BROKER_TEST_IDS.disconnect(
+                                    account.account_id
+                                  )
+                                }
+                                onClick={() =>
+                                  doDisconnect(
+                                    account
+                                  )
+                                }
+                                disabled={
+                                  Boolean(
+                                    disconnecting
+                                  )
+                                }
+                                className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-warning hover:text-term-warning disabled:opacity-40 flex items-center gap-1"
+                              >
+                                {disconnecting ? (
+                                  <Loader2
+                                    size={
+                                      10
+                                    }
+                                    className="animate-spin"
+                                  />
+                                ) : (
+                                  <Radio
+                                    size={
+                                      10
+                                    }
+                                  />
+                                )}
+
+                                disconnect
+                              </button>
+                            ) : (
+                              <button
+                                data-testid={
+                                  BROKER_TEST_IDS.connect(
+                                    account.account_id
+                                  )
+                                }
+                                onClick={() =>
+                                  doConnect(
+                                    account
+                                  )
+                                }
+                                disabled={
+                                  Boolean(
+                                    connecting
+                                  )
+                                }
+                                className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-success hover:text-term-success disabled:opacity-40 flex items-center gap-1"
+                              >
+                                {connecting ? (
+                                  <Loader2
+                                    size={
+                                      10
+                                    }
+                                    className="animate-spin"
+                                  />
+                                ) : (
+                                  <Wifi
+                                    size={
+                                      10
+                                    }
+                                  />
+                                )}
+
+                                connect
+                              </button>
+                            )}
+
+                            <button
+                              data-testid={
+                                BROKER_TEST_IDS.test(
+                                  account.account_id
+                                )
+                              }
+                              onClick={() =>
+                                doTest(
+                                  account
+                                )
+                              }
+                              disabled={
+                                Boolean(
+                                  testing
+                                )
+                              }
+                              className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-accent hover:text-term-accent disabled:opacity-40 flex items-center gap-1"
+                            >
+                              {testing ? (
+                                <Loader2
+                                  size={
+                                    10
+                                  }
+                                  className="animate-spin"
+                                />
+                              ) : (
+                                <Zap
+                                  size={
+                                    10
+                                  }
+                                />
+                              )}
+
+                              test
+                            </button>
+
+                            <button
+                              data-testid={
+                                BROKER_TEST_IDS.info(
+                                  account.account_id
+                                )
+                              }
+                              onClick={() =>
+                                doInfo(
+                                  account
+                                )
+                              }
+                              className="h-7 px-2 border border-term-border font-mono text-[9px] uppercase hover:border-term-accent hover:text-term-accent flex items-center gap-1"
+                            >
+                              <Info
+                                size={
+                                  10
+                                }
+                              />
+
+                              info
+                            </button>
+
+                            <button
+                              data-testid={
+                                BROKER_TEST_IDS.remove(
+                                  account.account_id
+                                )
+                              }
+                              onClick={() =>
+                                doRemove(
+                                  account
+                                )
+                              }
+                              disabled={
+                                Boolean(
+                                  removing
+                                )
+                              }
+                              className="h-7 w-7 border border-term-border font-mono text-[9px] hover:border-term-danger hover:text-term-danger disabled:opacity-40 flex items-center justify-center"
+                              title="Remove account"
+                            >
+                              {removing ? (
+                                <Loader2
+                                  size={
+                                    10
+                                  }
+                                  className="animate-spin"
+                                />
+                              ) : (
+                                <Trash2
+                                  size={
+                                    10
+                                  }
+                                />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {infoAccount && (
+        <AccountInfoModal
+          account={
+            infoAccount
+          }
+          data={infoData}
+          loading={
+            infoLoading
+          }
+          onClose={
+            closeInfo
+          }
+        />
+      )}
+
+      {modalPlugin && (
+        <AddAccountModal
+          plugin={
+            modalPlugin
+          }
+          onClose={() =>
+            setModalPlugin(
+              null
+            )
+          }
+          onCreated={async () => {
+            setModalPlugin(
+              null
+            );
+
+            await load(
+              true
+            );
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function SummaryCell({
+  label,
+  value,
+  detail,
+  valueClassName = "",
+}) {
+  return (
+    <div className="border border-term-border bg-term-surface p-4">
+      <div className="font-mono text-[9px] text-term-muted uppercase tracking-wider">
+        {label}
+      </div>
+
+      <div
+        className={`font-display text-xl font-bold mt-1 truncate ${valueClassName}`}
+        title={String(
+          value ?? ""
+        )}
+      >
+        {value}
+      </div>
+
+      <div className="font-mono text-[9px] text-term-secondary mt-1 truncate">
+        {detail}
+      </div>
+    </div>
+  );
+}
+
+function BrokerGroup({
+  title,
+  plugins,
+  onAdd,
+}) {
+  if (!plugins.length) {
+    return null;
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <div className="font-mono text-[10px] text-term-muted uppercase tracking-wider">
+          {title}
+        </div>
+
+        <div className="h-px bg-term-border flex-1" />
+
+        <div className="font-mono text-[9px] text-term-muted">
+          {plugins.length}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {plugins.map(
+          (plugin) => (
+            <BrokerCard
+              key={
+                plugin.plugin_id
+              }
+              plugin={plugin}
+              onAdd={onAdd}
+            />
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BrokerCard({
+  plugin,
+  onAdd,
+}) {
+  const category =
+    CATEGORY_META[
+      plugin.category
+    ] ||
+    DEFAULT_CATEGORY;
+
+  const CategoryIcon =
+    category.icon;
+
+  const credentials =
+    safeArray(
+      plugin.required_credentials
+    );
+
+  const capabilities =
+    safeObject(
+      plugin.capabilities
+    );
+
+  const implementedCapabilities =
+    CAPABILITY_LABELS.filter(
+      ([key]) =>
+        capabilities[key] ===
+        true
+    );
+
+  return (
+    <div className="border border-term-border bg-term-panel p-4 hover:border-term-accent/50 transition-colors">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <CategoryIcon
+              size={13}
+              className={
+                category.className
+              }
+            />
+
+            <div className="font-display text-[14px] font-bold truncate">
+              {plugin.display_name ||
+                plugin.plugin_id}
+            </div>
+          </div>
+
+          <div className="font-mono text-[9px] text-term-muted mt-1 truncate">
+            {plugin.plugin_id}
+            {" · "}
+            v{plugin.version ||
+              "—"}
+          </div>
+        </div>
+
+        <span
+          className={`font-mono text-[9px] uppercase shrink-0 ${category.className}`}
+        >
+          {category.label}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 mt-4">
+        <div className="border border-term-border/60 px-2 py-2">
+          <div className="font-mono text-[8px] text-term-muted uppercase">
+            credentials
+          </div>
+
+          <div className="font-mono text-[10px] text-term-text mt-0.5">
+            {credentials.length}
+          </div>
+        </div>
+
+        <div className="border border-term-border/60 px-2 py-2">
+          <div className="font-mono text-[8px] text-term-muted uppercase">
+            capabilities
+          </div>
+
+          <div className="font-mono text-[10px] text-term-text mt-0.5">
+            {
+              implementedCapabilities.length
+            }
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <div className="font-mono text-[8px] text-term-muted uppercase mb-1">
+          implemented capabilities
+        </div>
+
+        {implementedCapabilities.length ? (
+          <div className="flex flex-wrap gap-1">
+            {implementedCapabilities.map(
+              ([key, label]) => (
+                <span
+                  key={key}
+                  className="border border-term-success/30 text-term-success px-1.5 py-0.5 font-mono text-[8px] uppercase"
+                >
+                  {label}
+                </span>
+              )
+            )}
+          </div>
+        ) : (
+          <span className="font-mono text-[9px] text-term-muted">
+            connection/account lifecycle only
+          </span>
+        )}
+      </div>
+
+      <div className="mt-3">
+        <div className="font-mono text-[8px] text-term-muted uppercase mb-1">
+          required fields
+        </div>
+
+        {credentials.length ? (
+          <div className="flex flex-wrap gap-1">
+            {credentials.map(
+              (key) => (
+                <span
+                  key={key}
+                  className="border border-term-border/60 px-1.5 py-0.5 font-mono text-[8px] text-term-secondary"
+                >
+                  {displayCredentialLabel(
+                    key,
+                    plugin.credential_labels
+                  )}
+                </span>
+              )
+            )}
+          </div>
+        ) : (
+          <span className="font-mono text-[9px] text-term-muted">
+            none
+          </span>
+        )}
+      </div>
+
+      <button
+        data-testid={
+          BROKER_TEST_IDS.addButton(
+            plugin.plugin_id
+          )
+        }
+        onClick={() =>
+          onAdd(plugin)
+        }
+        className="mt-4 w-full h-8 border border-term-border font-mono text-[10px] uppercase hover:border-term-accent hover:text-term-accent flex items-center justify-center gap-2"
+      >
+        <Plus size={11} />
+        add account
+      </button>
+    </div>
+  );
+                }
