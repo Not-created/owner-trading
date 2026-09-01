@@ -28,6 +28,12 @@ class Settings(BaseModel):
     # Security
     encryption_key: str  # Fernet key (base64, 32 bytes)
 
+    # HTTP cookies (must remain explicitly configurable for HTTP/IP deployments)
+    # - cookie_secure: False is REQUIRED when serving over plain HTTP (no TLS)
+    # - cookie_samesite: "lax" is required for HTTP cross-site cookie handling
+    cookie_secure: bool = True
+    cookie_samesite: str = "none"
+
     # CORS
     frontend_url: str
 
@@ -52,6 +58,8 @@ def get_settings() -> Settings:
         owner_email=os.environ["OWNER_EMAIL"],
         encryption_key=os.environ["ENCRYPTION_KEY"],
         frontend_url=os.environ["FRONTEND_URL"],
+        cookie_secure=os.environ.get("COOKIE_SECURE", "true").lower() in ("1", "true", "yes"),
+        cookie_samesite=os.environ.get("COOKIE_SAMESITE", "lax").lower(),
         openai_api_key=os.environ.get("OPENAI_API_KEY", ""),
         anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY", ""),
         google_api_key=os.environ.get("GOOGLE_API_KEY", ""),

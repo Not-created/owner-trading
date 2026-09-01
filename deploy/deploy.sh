@@ -65,6 +65,8 @@ NGINX_ENABLED="/etc/nginx/sites-enabled/owner-trading"
 SECRETS_FILE="${SECRETS_FILE:-${BACKEND_DIR}/.env}"
 
 BACKUP_DIR="${APP_DIR}/deploy/backups"
+RELEASE_DIR="${APP_DIR}/deploy/releases"
+LOCK_FILE="${APP_DIR}/deploy/.deploy.lock"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 
 # ---------------------------------------------------------------------------
@@ -114,6 +116,38 @@ restore_latest_backup() {
     log "Restored ${dst} from ${latest}"
   else
     warn "No backup found for ${dst} — manual recovery required"
+  fi
+}
+
+run_as_user() {
+  if [[ "${EUID}" -eq 0 ]]; then
+    if command -v runuser >/dev/null 2>&1; then
+      runuser -u "${SERVICE_USER}" -- "$@"
+    elif command -v sudo >/dev/null 2>&1; then
+      sudo -u "${SERVICE_USER}" "$@"
+    else
+      fail "Cannot switch to ${SERVICE_USER} (no runuser / sudo)"
+    fi
+  else
+    "$@"
+  fi
+}
+
+owns_dir() {
+  local path="$1"
+  [[ ! -e "${path}" ]] || { local own; own="$(stat -c '%U' "${path}" 2>/dev/null || true)"; [[ "${own}" == "${SERVICE_USER}" ]]; }
+}
+
+acquire_lock() {
+  if command -v flock >/dev/null 2>&1; then
+    exec 9>"${LOCK_FILE}"
+    if ! flock -n 9; then
+      fail "Another deployment is in progress (${LOCK_FILE}). Aborting."
+    fi
+    log "Deployment lock acquired: ${LOCK_FILE}"
+  else
+    ln -s ".pid.$$" "${LOCK_FILE}" 2>/dev/null && { log "Lock acquired via symlink fallback"; return; }
+    fail "Another deployment is in progress (${LOCK_FILE}). Aborting."
   fi
 }
 
@@ -211,21 +245,53 @@ install_node_yarn() {
 setup_backend() {
   log "Setting up backend virtual environment"
   if [[ ! -d "${VENV_DIR}" ]]; then
-    python3 -m venv "${VENV_DIR}"
+    run_as_user python3 -m venv "${VENV_DIR}"
     log "Created venv at ${VENV_DIR}"
   fi
-  "${VENV_DIR}/bin/pip" install --upgrade pip setuptools wheel
-  "${VENV_DIR}/bin/pip" install -r "${BACKEND_DIR}/requirements.txt"
+  if [[ "${EUID}" -eq 0 ]] && ! owns_dir "${VENV_DIR}"; then
+    chown -R "${SERVICE_USER}:${SERVICE_GROUP}" "${VENV_DIR}"
+    log "Corrected ownership of ${VENV_DIR}"
+  fi
+  run_as_user "${VENV_DIR}/bin/pip" install --upgrade pip setuptools wheel
+  run_as_user "${VENV_DIR}/bin/pip" install -r "${BACKEND_DIR}/requirements.txt"
   log "Backend dependencies installed"
 }
 
 # ---------------------------------------------------------------------------
 # 5. Backend .env (create only if missing — never overwrite)
 # ---------------------------------------------------------------------------
+# Validate required env keys without printing values.
+validate_secrets() {
+  local file="$1" key val
+  for key in MONGO_URL DB_NAME JWT_SECRET ENCRYPTION_KEY OWNER_USERNAME OWNER_PASSWORD OWNER_EMAIL FRONTEND_URL; do
+    val="$(grep -E "^${key}=" "${file}" | head -1 | cut -d= -f2- | tr -d '"' || true)"
+    [[ -n "${val}" ]] || fail "Secrets file missing required non-empty key: ${key}"
+  done
+  # Reject obvious placeholders
+  for key in JWT_SECRET ENCRYPTION_KEY OWNER_PASSWORD; do
+    val="$(grep -E "^${key}=" "${file}" | head -1 | cut -d= -f2- | tr -d '"' || true)"
+    case "${val}" in
+      ""|"change-me"|"changeme"|"CHANGE_ME"|"<generate-secure-random-value>"|"<set-strong-password>"|"dev-insecure"|"secret")
+        fail "Secrets: placeholder value for ${key}" ;;
+    esac
+  done
+  local pw ek ck cs
+  pw="$(grep -E '^OWNER_PASSWORD=' "${file}" | head -1 | cut -d= -f2- | tr -d '"' || true)"
+  [[ ${#pw} -ge 8 ]] || fail "OWNER_PASSWORD must be >= 8 chars (current: ${#pw})"
+  ek="$(grep -E '^ENCRYPTION_KEY=' "${file}" | head -1 | cut -d= -f2- | tr -d '"' || true)"
+  echo "${ek}" | grep -qE '^[A-Za-z0-9+/]{43}=$' || fail "ENCRYPTION_KEY is not a valid Fernet key"
+  ck="$(grep -E '^COOKIE_SECURE=' "${file}" | head -1 | cut -d= -f2- | tr -d '"' || true)"
+  cs="$(grep -E '^COOKIE_SAMESITE=' "${file}" | head -1 | cut -d= -f2- | tr -d '"' || true)"
+  [[ "${ck}" =~ ^(true|false)$ ]] || fail "COOKIE_SECURE must be true|false (got: ${ck:-empty})"
+  [[ "${cs}" =~ ^(none|lax|strict)$ ]] || fail "COOKIE_SAMESITE must be none|lax|strict (got: ${cs:-empty})"
+  log "Secrets validation passed (values not printed)"
+}
+
 setup_secrets() {
   if [[ -f "${SECRETS_FILE}" ]]; then
     log "Secrets file exists — preserving: ${SECRETS_FILE}"
     chmod 600 "${SECRETS_FILE}"
+    validate_secrets "${SECRETS_FILE}"
     return
   fi
 
@@ -236,7 +302,9 @@ setup_secrets() {
   JWT_SECRET_GEN="$(openssl rand -hex 32)"
   ENCRYPTION_KEY_GEN="$("${VENV_DIR}/bin/python" -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
 
-  # Allow non-interactive overrides via environment variables
+  # Allow non-interactive overrides via environment variables.
+  # Default cookie mode is HTTP/IP (no TLS): COOKIE_SECURE=false, SAMESITE=lax.
+  # For HTTPS: COOKIE_SECURE=true COOKIE_SAMESITE=none.
   MONGO_URL_IN="${MONGO_URL:-mongodb://localhost:27017}"
   DB_NAME_IN="${DB_NAME:-owner_trading_db}"
   OWNER_USERNAME_IN="${OWNER_USERNAME:-}"
@@ -244,6 +312,8 @@ setup_secrets() {
   OWNER_EMAIL_IN="${OWNER_EMAIL:-}"
   FRONTEND_URL_IN="${FRONTEND_URL:-http://localhost}"
   CORS_ORIGINS_IN="${CORS_ORIGINS:-${FRONTEND_URL_IN}}"
+  COOKIE_SECURE_IN="${COOKIE_SECURE:-false}"
+  COOKIE_SAMESITE_IN="${COOKIE_SAMESITE:-lax}"
 
   # If any required value is missing and stdin is a TTY, prompt interactively.
   if [[ -t 0 ]]; then
@@ -268,6 +338,7 @@ setup_secrets() {
 
   [[ -n "${OWNER_USERNAME_IN}" ]] || fail "OWNER_USERNAME is required (set env var or run interactively)"
   [[ -n "${OWNER_PASSWORD_IN}" ]] || fail "OWNER_PASSWORD is required (set env var or run interactively)"
+  [[ ${#OWNER_PASSWORD_IN} -ge 8 ]] || fail "OWNER_PASSWORD must be at least 8 characters"
   [[ -n "${OWNER_EMAIL_IN}" ]] || fail "OWNER_EMAIL is required (set env var or run interactively)"
 
   cat > "${SECRETS_FILE}" <<EOF
@@ -283,10 +354,30 @@ OWNER_PASSWORD="${OWNER_PASSWORD_IN}"
 OWNER_EMAIL="${OWNER_EMAIL_IN}"
 FRONTEND_URL="${FRONTEND_URL_IN}"
 CORS_ORIGINS="${CORS_ORIGINS_IN}"
+# HTTP/IP mode (no TLS). For HTTPS set COOKIE_SECURE=true COOKIE_SAMESITE=none
+COOKIE_SECURE="${COOKIE_SECURE_IN}"
+COOKIE_SAMESITE="${COOKIE_SAMESITE_IN}"
 EOF
   chmod 600 "${SECRETS_FILE}"
   chown "${SERVICE_USER}:${SERVICE_GROUP}" "${SECRETS_FILE}" 2>/dev/null || true
-  log "Secrets file created (chmod 600)"
+  validate_secrets "${SECRETS_FILE}"
+  log "Secrets file created (chmod 600) and validated"
+}
+
+# 5b. MongoDB validation — never install/reset/delete anything
+validate_mongodb() {
+  log "Validating MongoDB"
+  local MONGO_URL_IN
+  MONGO_URL_IN="$(grep -E '^MONGO_URL=' "${SECRETS_FILE}" | head -1 | cut -d= -f2- | tr -d '"' || true)"
+  if echo "${MONGO_URL_IN}" | grep -qiE '^mongodb://(127\.0\.0\.1|localhost)'; then
+    if systemctl is-active --quiet mongod 2>/dev/null || systemctl is-active --quiet mongodb 2>/dev/null; then
+      log "Local MongoDB service is running"
+    else
+      warn "Local MongoDB service is NOT running (expected: mongod or mongodb). Will be confirmed by backend health."
+    fi
+  else
+    log "Remote MongoDB detected — will be confirmed by backend /api/health (credentials never printed)"
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -297,13 +388,26 @@ build_frontend() {
     log "Skipping frontend build (--skip-frontend)"
     return
   fi
-  log "Building frontend (Yarn)"
-  cd "${FRONTEND_DIR}"
-  yarn install --frozen-lockfile
-  yarn build
-  cd "${APP_DIR}"
-  [[ -f "${FRONTEND_DIR}/build/index.html" ]] || fail "Frontend build missing index.html"
-  log "Frontend build complete"
+  if [[ "${EUID}" -eq 0 ]]; then
+    mkdir -p "${FRONTEND_DIR}/node_modules"
+    chown -R "${SERVICE_USER}:${SERVICE_GROUP}" "${FRONTEND_DIR}/node_modules" "${FRONTEND_DIR}/build" 2>/dev/null || true
+  fi
+  log "Installing frontend deps (Yarn, as ${SERVICE_USER})"
+  ( cd "${FRONTEND_DIR}" && run_as_user yarn install --frozen-lockfile --non-interactive )
+  BUILD_TMP="${FRONTEND_DIR}/build.tmp.${TIMESTAMP}"
+  log "Building frontend into ${BUILD_TMP}"
+  ( cd "${FRONTEND_DIR}" && run_as_user env BUILD_PATH="build.tmp.${TIMESTAMP}" yarn build )
+  [[ -f "${BUILD_TMP}/index.html" ]] || fail "Frontend build missing index.html"
+  mkdir -p "${RELEASE_DIR}"
+  if [[ -d "${FRONTEND_DIR}/build" && ! -L "${FRONTEND_DIR}/build" ]]; then
+    mv "${FRONTEND_DIR}/build" "${RELEASE_DIR}/build.prev.${TIMESTAMP}"
+    log "Preserved previous build -> ${RELEASE_DIR}/build.prev.${TIMESTAMP}"
+  fi
+  mv "${BUILD_TMP}" "${FRONTEND_DIR}/build"
+  if [[ "${EUID}" -eq 0 ]]; then
+    chown -R "${SERVICE_USER}:${SERVICE_GROUP}" "${FRONTEND_DIR}/build"
+  fi
+  log "Frontend build complete (atomic)"
 }
 
 # ---------------------------------------------------------------------------
@@ -425,6 +529,10 @@ health_checks() {
 # ---------------------------------------------------------------------------
 # 10. Summary
 # ---------------------------------------------------------------------------
+firewall_check() {
+  log "Firewall / network check"
+}
+
 summary() {
   echo
   echo "============================================================"
@@ -444,15 +552,18 @@ summary() {
 # Main
 # ---------------------------------------------------------------------------
 main() {
+  acquire_lock
   preflight
   install_os_packages
   install_node_yarn
   setup_backend
   setup_secrets
+  validate_mongodb
   build_frontend
   install_nginx
   install_systemd
   health_checks
+  firewall_check
   summary
 }
 

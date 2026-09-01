@@ -52,14 +52,17 @@ def decode_token(token: str, expected_type: str) -> dict:
 
 def set_auth_cookies(response: Response, access: str, refresh: str) -> None:
     s = get_settings()
+    # Cookie flags are explicit deployment configuration (see core/config.py).
+    # HTTP/IP deployments (no TLS) MUST set COOKIE_SECURE=false and
+    # COOKIE_SAMESITE=lax; HTTPS deployments keep secure=true (default).
     response.set_cookie(
         "access_token", access,
-        httponly=True, secure=True, samesite="none",
+        httponly=True, secure=s.cookie_secure, samesite=s.cookie_samesite,
         max_age=s.access_token_ttl_min * 60, path="/",
     )
     response.set_cookie(
         "refresh_token", refresh,
-        httponly=True, secure=True, samesite="none",
+        httponly=True, secure=s.cookie_secure, samesite=s.cookie_samesite,
         max_age=s.refresh_token_ttl_days * 86400, path="/",
     )
 

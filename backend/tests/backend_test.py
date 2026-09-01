@@ -100,14 +100,19 @@ class TestAI:
 
 # ---------- Brokers ----------
 class TestBrokers:
-    def test_broker_plugins_alpaca_registered(self, auth_client):
+    def test_broker_plugins_registered(self, auth_client):
         r = auth_client.get(f"{API}/brokers/plugins")
         assert r.status_code == 200
         d = r.json()
         plugins = d.get("plugins", d) if isinstance(d, dict) else d
         assert isinstance(plugins, list)
         ids = {p["plugin_id"] for p in plugins}
-        assert "alpaca" in ids
+        expected_plugins = {"kotak_neo", "shoonya", "angel_one", "upstox", "groww", "dhan", "mt5", "mt4"}
+        assert expected_plugins.issubset(ids), f"Missing expected broker plugins: {expected_plugins - ids}"
+        for p in plugins:
+            assert "plugin_id" in p
+            assert "display_name" in p
+            assert "required_credentials" in p
 
     def test_create_account_nonexistent_plugin(self, auth_client):
         r = auth_client.post(f"{API}/brokers/accounts",

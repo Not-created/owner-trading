@@ -24,9 +24,16 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         "password": "Password",
         "mpin": "MPIN",
     }
+    supports_trading = True
 
     def _base_url(self) -> str:
         return "https://api.kotaksecurities.com"
+
+    def _headers(self, token: str | None = None) -> dict[str, str]:
+        headers = {"accept": "application/json", "Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        return headers
 
     async def connect(self, credentials: dict) -> BrokerHealth:
         base = self._base_url()
@@ -34,13 +41,16 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         start = time.perf_counter()
         try:
             async with httpx.AsyncClient(timeout=10.0) as c:
-                r = await c.post(url, json={
-                    "api_key": credentials["api_key"],
-                    "api_secret": credentials["api_secret"],
-                    "mobileno": credentials["mobileno"],
-                    "password": credentials["password"],
-                    "mpin": credentials["mpin"],
-                })
+                r = await c.post(
+                    url,
+                    json={
+                        "api_key": credentials["api_key"],
+                        "api_secret": credentials["api_secret"],
+                        "mobileno": credentials["mobileno"],
+                        "password": credentials["password"],
+                        "mpin": credentials["mpin"],
+                    },
+                )
             latency = int((time.perf_counter() - start) * 1000)
             if r.status_code == 200:
                 data = r.json()
@@ -71,13 +81,16 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
     async def _auth(self, base: str, credentials: dict) -> str | None:
         try:
             async with httpx.AsyncClient(timeout=10.0) as c:
-                r = await c.post(f"{base}/session/1.0/session/create", json={
-                    "api_key": credentials["api_key"],
-                    "api_secret": credentials["api_secret"],
-                    "mobileno": credentials["mobileno"],
-                    "password": credentials["password"],
-                    "mpin": credentials["mpin"],
-                })
+                r = await c.post(
+                    f"{base}/session/1.0/session/create",
+                    json={
+                        "api_key": credentials["api_key"],
+                        "api_secret": credentials["api_secret"],
+                        "mobileno": credentials["mobileno"],
+                        "password": credentials["password"],
+                        "mpin": credentials["mpin"],
+                    },
+                )
             if r.status_code == 200:
                 data = r.json()
                 return data.get("token") or data.get("access_token")
@@ -87,11 +100,116 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
 
     async def _get_user_details(self, base: str, token: str) -> dict:
         try:
-            headers = {"Authorization": f"Bearer {token}", "accept": "application/json"}
             async with httpx.AsyncClient(timeout=6.0) as c:
-                r = await c.get(f"{base}/session/1.0/session/getUserDetails", headers=headers)
+                r = await c.get(f"{base}/session/1.0/session/getUserDetails", headers=self._headers(token))
             if r.status_code == 200:
                 return r.json()
         except Exception:
             pass
         return {}
+
+    async def place_order(self, credentials: dict[str, Any], order_params: dict[str, Any]) -> dict[str, Any]:
+        token = await self._auth(self._base_url(), credentials)
+        if not token:
+            raise ValueError("Kotak Neo authentication failed")
+        payload = {
+            "symbol": order_params.get("symbol"),
+            "exchange": order_params.get("exchange"),
+            "segment": "NSE",
+            "product": (order_params.get("product") or "CNC").upper(),
+            "side": (order_params.get("side") or "BUY").upper(),
+            "quantity": int(order_params.get("quantity") or 0),
+            "order_type": (order_params.get("order_type") or "LIMIT").upper(),
+            "price": order_params.get("price"),
+            "trigger_price": order_params.get("trigger_price"),
+            "validity": (order_params.get("validity") or "DAY").upper(),
+            "client_order_id": order_params.get("client_order_id"),
+        }
+        async with httpx.AsyncClient(timeout=12.0) as c:
+            r = await c.post(f"{self._base_url()}/orders/1.0/order/create", headers=self._headers(token), json=payload)
+        if r.status_code != 200:
+            raise RuntimeError(f"Kotak order placement failed: HTTP {r.status_code} {r.text[:200]}")
+        data = r.json()
+        return {"order_id": data.get("order_id") or data.get("orderId") or order_params.get("client_order_id"), "status": (data.get("status") or "PENDING").upper(), "raw": data}
+
+    async def modify_order(self, credentials: dict[str, Any], order_id: str, modify_params: dict[str, Any]) -> dict[str, Any]:
+        token = await self._auth(self._base_url(), credentials)
+        if not token:
+            raise ValueError("Kotak Neo authentication failed")
+        payload = {"order_id": order_id, **modify_params}
+        async with httpx.AsyncClient(timeout=12.0) as c:
+            r = await c.put(f"{self._base_url()}/orders/1.0/order/modify", headers=self._headers(token), json=payload)
+        if r.status_code != 200:
+            raise RuntimeError(f"Kotak order modify failed: HTTP {r.status_code} {r.text[:200]}")
+        data = r.json()
+        return {"order_id": order_id, "status": (data.get("status") or "PENDING").upper(), "raw": data}
+
+    async def cancel_order(self, credentials: dict[str, Any], order_id: str) -> dict[str, Any]:
+        token = await self._auth(self._base_url(), credentials)
+        if not token:
+            raise ValueError("Kotak Neo authentication failed")
+        payload = {"order_id": order_id}
+        async with httpx.AsyncClient(timeout=12.0) as c:
+            r = await c.post(f"{self._base_url()}/orders/1.0/order/cancel", headers=self._headers(token), json=payload)
+        if r.status_code != 200:
+            raise RuntimeError(f"Kotak order cancel failed: HTTP {r.status_code} {r.text[:200]}")
+        data = r.json()
+        return {"order_id": order_id, "status": (data.get("status") or "CANCELLED").upper(), "raw": data}
+
+    async def get_order_status(self, credentials: dict[str, Any], order_id: str) -> dict[str, Any]:
+        token = await self._auth(self._base_url(), credentials)
+        if not token:
+            raise ValueError("Kotak Neo authentication failed")
+        async with httpx.AsyncClient(timeout=12.0) as c:
+            r = await c.get(f"{self._base_url()}/orders/1.0/order/{order_id}/status", headers=self._headers(token))
+        if r.status_code != 200:
+            raise RuntimeError(f"Kotak order status failed: HTTP {r.status_code} {r.text[:200]}")
+        data = r.json()
+        return {"order_id": order_id, "status": (data.get("status") or "PENDING").upper(), "raw": data}
+
+    async def get_positions(self, credentials: dict[str, Any]) -> list[dict[str, Any]]:
+        token = await self._auth(self._base_url(), credentials)
+        if not token:
+            raise ValueError("Kotak Neo authentication failed")
+        async with httpx.AsyncClient(timeout=12.0) as c:
+            r = await c.get(f"{self._base_url()}/portfolio/1.0/positions", headers=self._headers(token))
+        if r.status_code != 200:
+            raise RuntimeError(f"Kotak positions failed: HTTP {r.status_code} {r.text[:200]}")
+        data = r.json()
+        rows = data if isinstance(data, list) else data.get("positions") or data.get("data") or []
+        return rows
+
+    async def get_holdings(self, credentials: dict[str, Any]) -> list[dict[str, Any]]:
+        token = await self._auth(self._base_url(), credentials)
+        if not token:
+            raise ValueError("Kotak Neo authentication failed")
+        async with httpx.AsyncClient(timeout=12.0) as c:
+            r = await c.get(f"{self._base_url()}/portfolio/1.0/holdings", headers=self._headers(token))
+        if r.status_code != 200:
+            raise RuntimeError(f"Kotak holdings failed: HTTP {r.status_code} {r.text[:200]}")
+        data = r.json()
+        rows = data if isinstance(data, list) else data.get("holdings") or data.get("data") or []
+        return rows
+
+    async def get_funds(self, credentials: dict[str, Any]) -> dict[str, Any]:
+        token = await self._auth(self._base_url(), credentials)
+        if not token:
+            raise ValueError("Kotak Neo authentication failed")
+        async with httpx.AsyncClient(timeout=12.0) as c:
+            r = await c.get(f"{self._base_url()}/funds/1.0/summary", headers=self._headers(token))
+        if r.status_code != 200:
+            raise RuntimeError(f"Kotak funds failed: HTTP {r.status_code} {r.text[:200]}")
+        data = r.json()
+        return data if isinstance(data, dict) else {"raw": data}
+
+    async def get_trade_history(self, credentials: dict[str, Any]) -> list[dict[str, Any]]:
+        token = await self._auth(self._base_url(), credentials)
+        if not token:
+            raise ValueError("Kotak Neo authentication failed")
+        async with httpx.AsyncClient(timeout=12.0) as c:
+            r = await c.get(f"{self._base_url()}/orders/1.0/trade-history", headers=self._headers(token))
+        if r.status_code != 200:
+            raise RuntimeError(f"Kotak trade history failed: HTTP {r.status_code} {r.text[:200]}")
+        data = r.json()
+        rows = data if isinstance(data, list) else data.get("trades") or data.get("orders") or data.get("data") or []
+        return rows

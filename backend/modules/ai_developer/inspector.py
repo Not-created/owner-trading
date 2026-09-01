@@ -8,14 +8,60 @@ import re
 from pathlib import Path
 
 
+def _is_valid_project_root(path: Path) -> bool:
+    """Check if directory contains essential workspace markers."""
+    try:
+        return (
+            path.is_dir()
+            and (path / "backend" / "server.py").is_file()
+            and (path / "frontend" / "package.json").is_file()
+        )
+    except Exception:
+        return False
+
+
 def _resolve_app_root() -> Path:
-    candidates = [Path("/app")]
-    current = Path(__file__).resolve()
-    candidates.extend(current.parents[:6])
+    """
+    Robustly resolves the workspace project root across environments:
+    - Custom environment variable (APP_DIR)
+    - File hierarchy ancestor traversal from current module location
+    - Current working directory ancestor traversal
+    - Container root (/app)
+    Fails with RuntimeError if no valid project root is found.
+    """
+    candidates: list[Path] = []
+
+    # 1. Environment variable if explicitly specified
+    env_app_dir = os.environ.get("APP_DIR", "").strip()
+    if env_app_dir:
+        candidates.append(Path(env_app_dir).resolve())
+
+    # 2. Ancestors of current file
+    current_file = Path(__file__).resolve()
+    candidates.extend(current_file.parents)
+
+    # 3. Ancestors of current working directory
+    try:
+        cwd = Path.cwd().resolve()
+        candidates.append(cwd)
+        candidates.extend(cwd.parents)
+    except Exception:
+        pass
+
+    # 4. Standard container path (/app)
+    candidates.append(Path("/app").resolve())
+
+    seen: set[Path] = set()
     for candidate in candidates:
-        if candidate.exists() and (candidate / "backend").exists() and (candidate / "frontend").exists() and (candidate / "memory").exists():
-            return candidate.resolve()
-    return Path("/app")
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        if _is_valid_project_root(candidate):
+            return candidate
+
+    raise RuntimeError(
+        "Could not resolve a valid project root containing 'backend/server.py' and 'frontend/package.json'."
+    )
 
 
 APP_ROOT = _resolve_app_root()
@@ -58,7 +104,7 @@ def project_map() -> dict:
         node: dict = {"type": "dir", "children": {}}
         _walk_into(root, node, depth=0)
         tree[root.relative_to(APP_ROOT).as_posix()] = node
-    return {"root": "/app", "tree": tree}
+    return {"root": APP_ROOT.as_posix(), "tree": tree}
 
 
 def _walk_into(dir_path: Path, node: dict, depth: int) -> None:
