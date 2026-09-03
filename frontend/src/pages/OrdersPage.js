@@ -8,7 +8,7 @@ export default function OrdersPage() {
 
   useEffect(() => {
     let alive = true;
-    api.get("/orders").then((r) => { if (alive) setItems(r.data.orders || r.data || []); }).catch((e) => { if (alive) setError(formatApiError(e)); });
+    api.get("/brokers/orders").then((r) => { if (alive) setItems(r.data.orders || r.data || []); }).catch((e) => { if (alive) setError(formatApiError(e)); });
     return () => { alive = false; };
   }, []);
 

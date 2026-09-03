@@ -208,11 +208,13 @@ async def get_positions(user_id: str, account_id: str | None = None) -> list[dic
     query: dict[str, Any] = {"user_id": user_id}
     if account_id:
         query["account_id"] = account_id
-    cursor = db.positions.find(query)
-    out: list[dict[str, Any]] = []
-    async for item in cursor:
-        out.append(item)
-    return out
+        acc = await _get_account_for_user(user_id, account_id or "")
+        plugin = await _get_plugin_for_account(acc)
+        if acc.get("status") != "connected":
+            raise AppError("VALIDATION", status=400, detail="Broker account is not connected")
+        enc = __import__("core.security", fromlist=["get_encryption"]).get_encryption()
+        creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
+        return await plugin.get_positions(creds)
 
 
 async def get_holdings(user_id: str, account_id: str | None = None) -> list[dict[str, Any]]:
@@ -220,17 +222,21 @@ async def get_holdings(user_id: str, account_id: str | None = None) -> list[dict
     query: dict[str, Any] = {"user_id": user_id}
     if account_id:
         query["account_id"] = account_id
-    cursor = db.holdings.find(query)
-    out: list[dict[str, Any]] = []
-    async for item in cursor:
-        out.append(item)
-    return out
+        acc = await _get_account_for_user(user_id, account_id or "")
+        plugin = await _get_plugin_for_account(acc)
+        if acc.get("status") != "connected":
+            raise AppError("VALIDATION", status=400, detail="Broker account is not connected")
+        enc = __import__("core.security", fromlist=["get_encryption"]).get_encryption()
+        creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
+        return await plugin.get_holdings(creds)
 
 
 async def get_funds(user_id: str, account_id: str) -> dict[str, Any]:
     acc = await _get_account_for_user(user_id, account_id)
     plugin = await _get_plugin_for_account(acc)
-    if not hasattr(plugin, "get_funds"):
+    if acc.get("status") != "connected":
+        raise AppError("VALIDATION", status=400, detail="Broker account is not connected")
+    if not plugin.supports("funds"):
         raise AppError("VALIDATION", status=400, detail="Funds are not supported by this broker plugin")
     enc = __import__("core.security", fromlist=["get_encryption"]).get_encryption()
     creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
@@ -242,8 +248,10 @@ async def get_trade_history(user_id: str, account_id: str | None = None) -> list
     query: dict[str, Any] = {"user_id": user_id}
     if account_id:
         query["account_id"] = account_id
-    cursor = db.trade_history.find(query)
-    out: list[dict[str, Any]] = []
-    async for item in cursor:
-        out.append(item)
-    return out
+        acc = await _get_account_for_user(user_id, account_id or "")
+        plugin = await _get_plugin_for_account(acc)
+        if acc.get("status") != "connected":
+            raise AppError("VALIDATION", status=400, detail="Broker account is not connected")
+        enc = __import__("core.security", fromlist=["get_encryption"]).get_encryption()
+        creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
+        return await plugin.get_trade_history(creds)

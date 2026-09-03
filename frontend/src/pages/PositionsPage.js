@@ -8,7 +8,12 @@ export default function PositionsPage() {
 
   useEffect(() => {
     let alive = true;
-    api.get("/positions").then((r) => { if (alive) setItems(r.data.positions || r.data || []); }).catch((e) => { if (alive) setError(formatApiError(e)); });
+    api.get("/brokers/accounts").then(async ({ data }) => {
+      const account = (data.accounts || []).find((item) => item.is_primary) || (data.accounts || []).find((item) => item.status === "connected");
+      if (!account) throw new Error("Connect a Kotak Neo account to view positions");
+      const response = await api.get(`/brokers/positions?account_id=${encodeURIComponent(account.account_id)}`);
+      if (alive) setItems(response.data.positions || response.data || []);
+    }).catch((e) => { if (alive) setError(formatApiError(e)); });
     return () => { alive = false; };
   }, []);
 
