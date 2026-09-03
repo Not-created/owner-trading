@@ -46,6 +46,10 @@ async def init_indexes() -> None:
     await db.broker_plugins.create_index("plugin_id", unique=True)
     await db.plugins.create_index("plugin_id", unique=True)
     await db.settings_store.create_index("key", unique=True)
+    await db.orders.create_index([("user_id", 1), ("account_id", 1), ("order_id", 1)])
+    await db.positions.create_index([("user_id", 1), ("account_id", 1)])
+    await db.holdings.create_index([("user_id", 1), ("account_id", 1)])
+    await db.trade_history.create_index([("user_id", 1), ("account_id", 1)])
 
 
 async def close_db() -> None:

@@ -51,6 +51,17 @@ async def _get_plugin_for_account(account: dict) -> Any:
     return plugin
 
 
+async def _get_owned_order(user_id: str, account_id: str, order_id: str) -> dict:
+    order = await get_db().orders.find_one({
+        "user_id": user_id,
+        "account_id": account_id,
+        "order_id": order_id,
+    })
+    if not order:
+        raise AppError("NOT_FOUND", status=404, detail="Order not found for this broker account")
+    return order
+
+
 def _validate_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if not payload:
         raise AppError("VALIDATION", status=400, detail="Order payload is required")
@@ -158,6 +169,7 @@ async def get_order(user_id: str, order_id: str) -> dict:
 
 
 async def refresh_order_status(user_id: str, account_id: str, order_id: str) -> dict:
+    await _get_owned_order(user_id, account_id, order_id)
     acc = await _get_account_for_user(user_id, account_id)
     plugin = await _get_plugin_for_account(acc)
     if acc.get("status") != "connected":
@@ -174,6 +186,7 @@ async def refresh_order_status(user_id: str, account_id: str, order_id: str) -> 
 
 
 async def modify_order(user_id: str, account_id: str, order_id: str, changes: dict[str, Any]) -> dict[str, Any]:
+    await _get_owned_order(user_id, account_id, order_id)
     acc = await _get_account_for_user(user_id, account_id)
     plugin = await _get_plugin_for_account(acc)
     if acc.get("status") != "connected":
@@ -189,6 +202,7 @@ async def modify_order(user_id: str, account_id: str, order_id: str, changes: di
 
 
 async def cancel_order(user_id: str, account_id: str, order_id: str) -> dict[str, Any]:
+    await _get_owned_order(user_id, account_id, order_id)
     acc = await _get_account_for_user(user_id, account_id)
     plugin = await _get_plugin_for_account(acc)
     if acc.get("status") != "connected":
