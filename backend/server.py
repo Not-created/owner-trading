@@ -36,6 +36,8 @@ through their own routers/services without duplicating existing layers.
 
 from __future__ import annotations
 
+from modules.strategy_router import router as strategy_router
+
 import os
 from pathlib import Path
 
@@ -301,6 +303,10 @@ app.include_router(
 
 app.include_router(
     brokers_router
+)
+
+app.include_router(
+    strategy_router
 )
 
 app.include_router(
