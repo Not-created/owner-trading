@@ -84,7 +84,8 @@ PyJWT==2.13.0
 pymongo==4.6.3
 PyOTP==2.10.0
 pyparsing==3.3.2
-pytest==9.1.1
+pytest==8.4.2
+pytest-asyncio==1.2.0
 pytest-xdist==3.8.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
@@ -123,3 +124,4 @@ yfinance==0.2.61
 websockets==16.1.1
 yarl==1.24.5
 zipp==4.1.0
+kotakneoapi==3.0.1

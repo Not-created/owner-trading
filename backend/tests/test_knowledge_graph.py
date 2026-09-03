@@ -96,13 +96,15 @@ def test_all_registered_plugins_are_broker_plugin_base_instances():
         assert p.version != ""
         assert isinstance(p.required_credentials, list)
         assert isinstance(p.credential_labels, dict)
-        assert p.supports_trading is False
+        assert p.supports_trading is (p.plugin_id == "kotak_neo")
 
 
 @pytest.mark.asyncio
 async def test_unimplemented_trading_methods_raise_not_implemented():
     bootstrap_broker_plugins()
     for p in broker_registry.all():
+        if p.plugin_id == "kotak_neo":
+            continue
         with pytest.raises(NotImplementedError):
             await p.place_order({}, {"symbol": "INFY", "quantity": 1})
 
@@ -124,14 +126,17 @@ def test_validate_credentials_helper():
     plugin = broker_registry.get("kotak_neo")
     assert plugin is not None
     missing = plugin.validate_credentials({})
-    assert "api_key" in missing
-    assert "password" in missing
+    assert "consumer_key" in missing
+    assert "mobileno" in missing
+    assert "ucc" in missing
+    assert "totp" in missing
+    assert "mpin" in missing
 
     valid = plugin.validate_credentials({
-        "api_key": "k",
-        "api_secret": "s",
-        "mobileno": "m",
-        "password": "p",
+        "consumer_key": "k",
+        "mobileno": "9876543210",
+        "ucc": "UCC123",
+        "totp": "123456",
         "mpin": "1234",
     })
     assert len(valid) == 0
