@@ -153,7 +153,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
                 self._session = {
                     "authenticated": True,
                     "sid": session_data.get("sid"),
-                    "ucc": session_data.get("ucc"),
+                    "ucc": session_data.get("ucc") or credentials["ucc"],
                     "greeting_name": session_data.get("greetingName"),
                     "base_url": session_data.get("baseUrl"),
                     "data_center": session_data.get("dataCenter"),
@@ -268,13 +268,24 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
             raise RuntimeError("Kotak Neo session is not connected")
         return self._client
 
+    async def _ensure_client(self, credentials: dict[str, Any]) -> Any:
+        requested_ucc = str(credentials.get("ucc", "")).strip()
+        if (
+            self._client is None
+            or self._session.get("ucc") != requested_ucc
+            or not self._session.get("authenticated")
+        ):
+            health = await self.connect(credentials)
+            if not health.ok:
+                raise RuntimeError(health.detail or "Kotak Neo session authentication failed")
+        return self._require_client()
+
     async def place_order(
         self,
         credentials: dict[str, Any],
         order_params: dict[str, Any],
     ) -> dict[str, Any]:
-        del credentials
-        client = self._require_client()
+        client = await self._ensure_client(credentials)
         exchange_segment = {
             "NSE": "nse_cm",
             "BSE": "bse_cm",
@@ -301,8 +312,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         credentials: dict[str, Any],
         order_id: str,
     ) -> dict[str, Any]:
-        del credentials
-        client = self._require_client()
+        client = await self._ensure_client(credentials)
         response = await asyncio.to_thread(client.order_report, order_id=order_id)
         return self._normalize_order_response(response, order_id)
 
@@ -312,8 +322,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         order_id: str,
         modify_params: dict[str, Any],
     ) -> dict[str, Any]:
-        del credentials
-        client = self._require_client()
+        client = await self._ensure_client(credentials)
         order_type = modify_params.get("order_type", "LIMIT")
         response = await asyncio.to_thread(
             client.modify_order,
@@ -331,8 +340,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         credentials: dict[str, Any],
         order_id: str,
     ) -> dict[str, Any]:
-        del credentials
-        client = self._require_client()
+        client = await self._ensure_client(credentials)
         response = await asyncio.to_thread(client.cancel_order, order_id=order_id)
         result = self._normalize_order_response(response, order_id)
         result.setdefault("status", "CANCELLED")
@@ -343,8 +351,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         credentials: dict[str, Any],
         status: str | None = None,
     ) -> list[dict[str, Any]]:
-        del credentials
-        client = self._require_client()
+        client = await self._ensure_client(credentials)
         response = await asyncio.to_thread(client.order_report)
         self._raise_for_error(response)
         rows = self._response_rows(response)
@@ -354,26 +361,26 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         return rows
 
     async def get_positions(self, credentials: dict[str, Any]) -> list[dict[str, Any]]:
-        del credentials
-        response = await asyncio.to_thread(self._require_client().positions)
+        client = await self._ensure_client(credentials)
+        response = await asyncio.to_thread(client.positions)
         self._raise_for_error(response)
         return self._response_rows(response)
 
     async def get_holdings(self, credentials: dict[str, Any]) -> list[dict[str, Any]]:
-        del credentials
-        response = await asyncio.to_thread(self._require_client().holdings)
+        client = await self._ensure_client(credentials)
+        response = await asyncio.to_thread(client.holdings)
         self._raise_for_error(response)
         return self._response_rows(response)
 
     async def get_funds(self, credentials: dict[str, Any]) -> dict[str, Any]:
-        del credentials
-        response = await asyncio.to_thread(self._require_client().limits)
+        client = await self._ensure_client(credentials)
+        response = await asyncio.to_thread(client.limits)
         self._raise_for_error(response)
         return response if isinstance(response, dict) else {"data": response}
 
     async def get_trade_history(self, credentials: dict[str, Any]) -> list[dict[str, Any]]:
-        del credentials
-        response = await asyncio.to_thread(self._require_client().trade_report)
+        client = await self._ensure_client(credentials)
+        response = await asyncio.to_thread(client.trade_report)
         self._raise_for_error(response)
         return self._response_rows(response)
 

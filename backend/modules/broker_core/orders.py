@@ -184,7 +184,7 @@ async def modify_order(user_id: str, account_id: str, order_id: str, changes: di
     creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
     result = await plugin.modify_order(creds, order_id, changes)
     db = get_db()
-    await db.orders.update_one({"user_id": user_id, "account_id": account_id, "order_id": order_id}, {"$set": {"raw": result, "updated_at": datetime.now(timezone.utc).isoformat()}})
+    await db.orders.update_one({"user_id": user_id, "account_id": account_id, "order_id": order_id}, {"$set": {"status": (result.get("status") or "PENDING").upper(), "raw": result, "updated_at": datetime.now(timezone.utc).isoformat()}})
     return {"ok": True, "result": result}
 
 
@@ -199,7 +199,7 @@ async def cancel_order(user_id: str, account_id: str, order_id: str) -> dict[str
     creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
     result = await plugin.cancel_order(creds, order_id)
     db = get_db()
-    await db.orders.update_one({"user_id": user_id, "account_id": account_id, "order_id": order_id}, {"$set": {"status": "CANCELLED", "raw": result, "updated_at": datetime.now(timezone.utc).isoformat()}})
+    await db.orders.update_one({"user_id": user_id, "account_id": account_id, "order_id": order_id}, {"$set": {"status": (result.get("status") or "CANCELLED").upper(), "raw": result, "updated_at": datetime.now(timezone.utc).isoformat()}})
     return {"ok": True, "result": result}
 
 
