@@ -580,16 +580,7 @@ async def test_connection(
             2,
         )
 
-        result = (
-            result
-            if isinstance(
-                result,
-                dict,
-            )
-            else {
-                "ok": bool(result),
-            }
-        )
+        result = _health_result(result)
 
         ok = bool(
             result.get(
@@ -737,16 +728,7 @@ async def connect_account(
             2,
         )
 
-        result = (
-            result
-            if isinstance(
-                result,
-                dict,
-            )
-            else {
-                "ok": bool(result),
-            }
-        )
+        result = _health_result(result)
 
         ok = bool(
             result.get(
@@ -1080,3 +1062,13 @@ def redact_sensitive_payload(
             )
 
     return output
+
+
+def _health_result(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    return {
+        "ok": bool(getattr(value, "ok", False)),
+        "detail": getattr(value, "detail", None),
+        "latency_ms": getattr(value, "latency_ms", 0),
+    }
