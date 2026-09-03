@@ -268,9 +268,9 @@ export default function DashboardPage() {
 
         <div className="flex items-center gap-2">
           <div className="font-mono text-[11px] text-term-secondary">
-            uptime{" "}
-            <span className="text-term-success">
-              nominal
+            runtime{" "}
+            <span className={health?.ok ? "text-term-success" : "text-term-danger"}>
+              {health?.ok ? "available" : health ? "unavailable" : "checking"}
             </span>
           </div>
 
@@ -597,9 +597,7 @@ export default function DashboardPage() {
                 encryption
               </span>
 
-              <span className="text-term-success">
-                fernet:active
-              </span>
+              <span className="text-term-muted">configured server-side</span>
             </div>
 
             <div className="flex justify-between">
@@ -607,9 +605,7 @@ export default function DashboardPage() {
                 audit_log
               </span>
 
-              <span className="text-term-success">
-                streaming
-              </span>
+              <span className="text-term-muted">available via logs</span>
             </div>
 
             <div className="flex justify-between">
@@ -617,9 +613,7 @@ export default function DashboardPage() {
                 rate_limit
               </span>
 
-              <span className="text-term-success">
-                enforced
-              </span>
+              <span className="text-term-muted">not reported</span>
             </div>
 
             <div className="flex justify-between">
@@ -627,9 +621,9 @@ export default function DashboardPage() {
                 security
               </span>
 
-              <span className="text-term-success flex items-center gap-1">
+              <span className="text-term-muted flex items-center gap-1">
                 <ShieldCheck size={10} />
-                active
+                configured
               </span>
             </div>
           </div>

@@ -8,7 +8,12 @@ export default function OrdersPage() {
 
   useEffect(() => {
     let alive = true;
-    api.get("/brokers/orders").then((r) => { if (alive) setItems(r.data.orders || r.data || []); }).catch((e) => { if (alive) setError(formatApiError(e)); });
+    api.get("/brokers/accounts").then(async ({ data }) => {
+      const account = (data.accounts || []).find((item) => item.is_primary && item.status === "connected") || (data.accounts || []).find((item) => item.status === "connected");
+      if (!account) throw new Error("Connect a Kotak Neo account to view orders");
+      const response = await api.get(`/brokers/orders?account_id=${encodeURIComponent(account.account_id)}`);
+      if (alive) setItems(response.data.orders || response.data || []);
+    }).catch((e) => { if (alive) setError(formatApiError(e)); });
     return () => { alive = false; };
   }, []);
 

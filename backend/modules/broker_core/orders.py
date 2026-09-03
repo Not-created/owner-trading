@@ -147,6 +147,14 @@ async def create_order(user_id: str, account_id: str, payload: dict[str, Any]) -
 
 
 async def get_orders(user_id: str, account_id: str | None = None, status: str | None = None) -> list[dict]:
+    if account_id:
+        acc = await _get_account_for_user(user_id, account_id)
+        plugin = await _get_plugin_for_account(acc)
+        if acc.get("status") != "connected":
+            raise AppError("VALIDATION", status=400, detail="Broker account is not connected")
+        enc = __import__("core.security", fromlist=["get_encryption"]).get_encryption()
+        creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
+        return await plugin.get_orders(creds, status=status)
     db = get_db()
     query: dict[str, Any] = {"user_id": user_id}
     if account_id:
