@@ -294,7 +294,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
             transaction_type={"BUY": "B", "SELL": "S"}[order_params["side"]],
             trigger_price=str(order_params.get("trigger_price") or "0"),
         )
-        return self._normalize_order_response(order, order_params.get("client_order_id"))
+        return self._normalize_order_response(order, None)
 
     async def get_order_status(
         self,
@@ -346,6 +346,7 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         del credentials
         client = self._require_client()
         response = await asyncio.to_thread(client.order_report)
+        self._raise_for_error(response)
         rows = self._response_rows(response)
         if status:
             wanted = status.upper()
@@ -354,20 +355,32 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
 
     async def get_positions(self, credentials: dict[str, Any]) -> list[dict[str, Any]]:
         del credentials
-        return self._response_rows(await asyncio.to_thread(self._require_client().positions))
+        response = await asyncio.to_thread(self._require_client().positions)
+        self._raise_for_error(response)
+        return self._response_rows(response)
 
     async def get_holdings(self, credentials: dict[str, Any]) -> list[dict[str, Any]]:
         del credentials
-        return self._response_rows(await asyncio.to_thread(self._require_client().holdings))
+        response = await asyncio.to_thread(self._require_client().holdings)
+        self._raise_for_error(response)
+        return self._response_rows(response)
 
     async def get_funds(self, credentials: dict[str, Any]) -> dict[str, Any]:
         del credentials
         response = await asyncio.to_thread(self._require_client().limits)
+        self._raise_for_error(response)
         return response if isinstance(response, dict) else {"data": response}
 
     async def get_trade_history(self, credentials: dict[str, Any]) -> list[dict[str, Any]]:
         del credentials
-        return self._response_rows(await asyncio.to_thread(self._require_client().trade_report))
+        response = await asyncio.to_thread(self._require_client().trade_report)
+        self._raise_for_error(response)
+        return self._response_rows(response)
+
+    @staticmethod
+    def _raise_for_error(response: Any) -> None:
+        if isinstance(response, dict) and (response.get("Error") or response.get("Error Message")):
+            raise RuntimeError("Kotak Neo broker request failed")
 
     @staticmethod
     def _response_rows(response: Any) -> list[dict[str, Any]]:
@@ -389,6 +402,8 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
             rows = cls._response_rows(response)
             source = rows[0] if rows else response
             order_id = source.get("orderId") or source.get("order_id") or source.get("nOrdNo") or fallback_id
+            if not order_id:
+                raise RuntimeError("Kotak Neo returned no broker order ID")
             status = source.get("status") or source.get("ordSt") or source.get("orderStatus") or "PENDING"
             return {"order_id": order_id, "status": str(status).upper(), "raw": response}
         raise RuntimeError("Kotak Neo returned an invalid order response")
