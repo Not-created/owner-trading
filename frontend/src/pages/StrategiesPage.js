@@ -46,9 +46,29 @@ export default function StrategiesPage() {
     setBusy(true);
     setError(null);
     try {
-      const { data } = await api.post("/strategies", { ...form, quantity: Number(form.quantity), max_positions: Number(form.max_positions) });
-      setItems((current) => [data, ...current]);
+      const payload = { ...form, quantity: Number(form.quantity), max_positions: Number(form.max_positions) };
+      const { data } = selected
+        ? await api.put(`/strategies/${selected.strategy_id}`, payload)
+        : await api.post("/strategies", payload);
+      setItems((current) => selected
+        ? current.map((item) => item.strategy_id === data.strategy_id ? data : item)
+        : [data, ...current]);
       setSelected(data);
+    } catch (requestError) {
+      setError(formatApiError(requestError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function setStatus(status) {
+    if (!selected) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const { data } = await api.post(`/strategies/${selected.strategy_id}/status`, { status });
+      setSelected(data);
+      setItems((current) => current.map((item) => item.strategy_id === data.strategy_id ? data : item));
     } catch (requestError) {
       setError(formatApiError(requestError));
     } finally {
@@ -83,15 +103,15 @@ export default function StrategiesPage() {
         ))}
         <label className="grid gap-1 font-mono text-xs">Timeframe<select value={form.timeframe} onChange={(event) => update("timeframe", event.target.value)} className="h-9 border border-term-border bg-term-panel px-2"><option>1d</option><option>1h</option><option>15m</option></select></label>
         <label className="grid gap-1 font-mono text-xs">Quantity<input type="number" min="1" value={form.quantity} onChange={(event) => update("quantity", event.target.value)} className="h-9 border border-term-border bg-term-panel px-2" /></label>
-        <button disabled={busy} className="h-9 border border-term-accent font-mono text-xs md:col-span-2">{busy ? "SAVING" : "SAVE STRATEGY"}</button>
+        <button disabled={busy} className="h-9 border border-term-accent font-mono text-xs md:col-span-2">{busy ? "SAVING" : selected ? "UPDATE STRATEGY" : "SAVE STRATEGY"}</button>
       </form>
       <section className="border border-term-border bg-term-surface p-4 space-y-3">
         <h2 className="font-display font-bold">Saved Strategies</h2>
         {loading && <div className="text-term-muted font-mono text-sm">Loading...</div>}
         {!loading && items.length === 0 && <div className="text-term-muted font-mono text-sm">No strategies saved.</div>}
-        {items.map((strategy) => <button key={strategy.strategy_id} onClick={() => setSelected(strategy)} className={`block w-full text-left border p-3 font-mono text-sm ${selected?.strategy_id === strategy.strategy_id ? "border-term-accent" : "border-term-border"}`}>{strategy.name} · {strategy.symbol} · {strategy.status} · v{strategy.version}</button>)}
+        {items.map((strategy) => <button key={strategy.strategy_id} onClick={() => { setSelected(strategy); setForm(strategy); }} className={`block w-full text-left border p-3 font-mono text-sm ${selected?.strategy_id === strategy.strategy_id ? "border-term-accent" : "border-term-border"}`}>{strategy.name} · {strategy.symbol} · {strategy.status} · v{strategy.version}</button>)}
       </section>
-      {selected && <form onSubmit={runBacktest} className="border border-term-border bg-term-surface p-4 space-y-3"><h2 className="font-display font-bold">Backtest {selected.name}</h2><div className="grid md:grid-cols-3 gap-3"><input type="datetime-local" required value={backtest.start} onChange={(event) => setBacktest({ ...backtest, start: event.target.value })} className="h-9 border border-term-border bg-term-panel px-2 font-mono text-xs" /><input type="datetime-local" required value={backtest.end} onChange={(event) => setBacktest({ ...backtest, end: event.target.value })} className="h-9 border border-term-border bg-term-panel px-2 font-mono text-xs" /><input type="number" min="1" required value={backtest.initial_capital} onChange={(event) => setBacktest({ ...backtest, initial_capital: event.target.value })} className="h-9 border border-term-border bg-term-panel px-2 font-mono text-xs" /></div><button disabled={busy} className="h-9 border border-term-accent px-3 font-mono text-xs">{busy ? "RUNNING" : "RUN BACKTEST"}</button></form>}
+      {selected && <><div className="flex gap-2"><button disabled={busy} onClick={() => setStatus("PAUSED")} className="h-9 border border-term-border px-3 font-mono text-xs">PAUSE</button><button disabled={busy} onClick={() => setStatus("DISABLED")} className="h-9 border border-term-danger px-3 font-mono text-xs">DISABLE</button></div><form onSubmit={runBacktest} className="border border-term-border bg-term-surface p-4 space-y-3"><h2 className="font-display font-bold">Backtest {selected.name}</h2><div className="grid md:grid-cols-3 gap-3"><input type="datetime-local" required value={backtest.start} onChange={(event) => setBacktest({ ...backtest, start: event.target.value })} className="h-9 border border-term-border bg-term-panel px-2 font-mono text-xs" /><input type="datetime-local" required value={backtest.end} onChange={(event) => setBacktest({ ...backtest, end: event.target.value })} className="h-9 border border-term-border bg-term-panel px-2 font-mono text-xs" /><input type="number" min="1" required value={backtest.initial_capital} onChange={(event) => setBacktest({ ...backtest, initial_capital: event.target.value })} className="h-9 border border-term-border bg-term-panel px-2 font-mono text-xs" /></div><button disabled={busy} className="h-9 border border-term-accent px-3 font-mono text-xs">{busy ? "RUNNING" : "RUN BACKTEST"}</button></form></>}
       {result && <section className="border border-term-border bg-term-surface p-4"><h2 className="font-display font-bold">Backtest Result</h2><pre className="mt-3 overflow-auto font-mono text-xs">{JSON.stringify(result, null, 2)}</pre></section>}
     </div>
   );

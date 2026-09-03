@@ -94,6 +94,7 @@ export default function DashboardPage() {
   const [providers, setProviders] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [plugins, setPlugins] = useState([]);
+  const [strategies, setStrategies] = useState([]);
   const [logs, setLogs] = useState([]);
 
   const [health, setHealth] =
@@ -127,12 +128,14 @@ export default function DashboardPage() {
             providersResponse,
             accountsResponse,
             pluginsResponse,
+            strategiesResponse,
             logsResponse,
             healthResponse,
           ] = await Promise.all([
             api.get("/ai/providers"),
             api.get("/brokers/accounts"),
             api.get("/brokers/plugins"),
+            api.get("/strategies"),
             api.get("/logs", {
               params: {
                 limit: 8,
@@ -165,6 +168,12 @@ export default function DashboardPage() {
                 ?.plugins
             )
               ? pluginsResponse.data.plugins
+              : []
+          );
+
+          setStrategies(
+            Array.isArray(strategiesResponse?.data?.strategies)
+              ? strategiesResponse.data.strategies
               : []
           );
 
@@ -332,6 +341,12 @@ export default function DashboardPage() {
               ? "text-term-success"
               : "text-term-text"
           }
+        />
+
+        <Metric
+          label="Strategies"
+          value={loading ? "—" : strategies.length}
+          sub="saved definitions"
         />
 
         <Metric
