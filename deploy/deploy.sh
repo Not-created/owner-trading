@@ -279,7 +279,9 @@ validate_secrets() {
   pw="$(grep -E '^OWNER_PASSWORD=' "${file}" | head -1 | cut -d= -f2- | tr -d '"' || true)"
   [[ ${#pw} -ge 8 ]] || fail "OWNER_PASSWORD must be >= 8 chars (current: ${#pw})"
   ek="$(grep -E '^ENCRYPTION_KEY=' "${file}" | head -1 | cut -d= -f2- | tr -d '"' || true)"
-  echo "${ek}" | grep -qE '^[A-Za-z0-9+/]{43}=$' || fail "ENCRYPTION_KEY is not a valid Fernet key"
+  if ! FERNET_KEY="${ek}" "${VENV_DIR}/bin/python" -c 'import os; from cryptography.fernet import Fernet; Fernet(os.environ["FERNET_KEY"])' >/dev/null 2>&1; then
+    fail "ENCRYPTION_KEY is not a valid Fernet key"
+  fi
   ck="$(grep -E '^COOKIE_SECURE=' "${file}" | head -1 | cut -d= -f2- | tr -d '"' || true)"
   cs="$(grep -E '^COOKIE_SAMESITE=' "${file}" | head -1 | cut -d= -f2- | tr -d '"' || true)"
   [[ "${ck}" =~ ^(true|false)$ ]] || fail "COOKIE_SECURE must be true|false (got: ${ck:-empty})"

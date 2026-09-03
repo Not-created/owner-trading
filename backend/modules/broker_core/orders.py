@@ -218,31 +218,23 @@ async def cancel_order(user_id: str, account_id: str, order_id: str) -> dict[str
 
 
 async def get_positions(user_id: str, account_id: str | None = None) -> list[dict[str, Any]]:
-    db = get_db()
-    query: dict[str, Any] = {"user_id": user_id}
-    if account_id:
-        query["account_id"] = account_id
-        acc = await _get_account_for_user(user_id, account_id or "")
-        plugin = await _get_plugin_for_account(acc)
-        if acc.get("status") != "connected":
-            raise AppError("VALIDATION", status=400, detail="Broker account is not connected")
-        enc = __import__("core.security", fromlist=["get_encryption"]).get_encryption()
-        creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
-        return await plugin.get_positions(creds)
+    acc = await _get_account_for_user(user_id, account_id or "")
+    plugin = await _get_plugin_for_account(acc)
+    if acc.get("status") != "connected":
+        raise AppError("VALIDATION", status=400, detail="Broker account is not connected")
+    enc = __import__("core.security", fromlist=["get_encryption"]).get_encryption()
+    creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
+    return await plugin.get_positions(creds)
 
 
 async def get_holdings(user_id: str, account_id: str | None = None) -> list[dict[str, Any]]:
-    db = get_db()
-    query: dict[str, Any] = {"user_id": user_id}
-    if account_id:
-        query["account_id"] = account_id
-        acc = await _get_account_for_user(user_id, account_id or "")
-        plugin = await _get_plugin_for_account(acc)
-        if acc.get("status") != "connected":
-            raise AppError("VALIDATION", status=400, detail="Broker account is not connected")
-        enc = __import__("core.security", fromlist=["get_encryption"]).get_encryption()
-        creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
-        return await plugin.get_holdings(creds)
+    acc = await _get_account_for_user(user_id, account_id or "")
+    plugin = await _get_plugin_for_account(acc)
+    if acc.get("status") != "connected":
+        raise AppError("VALIDATION", status=400, detail="Broker account is not connected")
+    enc = __import__("core.security", fromlist=["get_encryption"]).get_encryption()
+    creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
+    return await plugin.get_holdings(creds)
 
 
 async def get_funds(user_id: str, account_id: str) -> dict[str, Any]:
@@ -258,14 +250,22 @@ async def get_funds(user_id: str, account_id: str) -> dict[str, Any]:
 
 
 async def get_trade_history(user_id: str, account_id: str | None = None) -> list[dict[str, Any]]:
-    db = get_db()
-    query: dict[str, Any] = {"user_id": user_id}
-    if account_id:
-        query["account_id"] = account_id
-        acc = await _get_account_for_user(user_id, account_id or "")
-        plugin = await _get_plugin_for_account(acc)
-        if acc.get("status") != "connected":
-            raise AppError("VALIDATION", status=400, detail="Broker account is not connected")
-        enc = __import__("core.security", fromlist=["get_encryption"]).get_encryption()
-        creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
-        return await plugin.get_trade_history(creds)
+    acc = await _get_account_for_user(user_id, account_id or "")
+    plugin = await _get_plugin_for_account(acc)
+    if acc.get("status") != "connected":
+        raise AppError("VALIDATION", status=400, detail="Broker account is not connected")
+    enc = __import__("core.security", fromlist=["get_encryption"]).get_encryption()
+    creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
+    return await plugin.get_trade_history(creds)
+
+
+async def get_market_quotes(user_id: str, account_id: str, symbols: list[str], exchange: str = "NSE") -> list[dict[str, Any]]:
+    acc = await _get_account_for_user(user_id, account_id)
+    plugin = await _get_plugin_for_account(acc)
+    if acc.get("status") != "connected":
+        raise AppError("VALIDATION", status=400, detail="Broker account is not connected")
+    if not hasattr(plugin, "get_market_quotes"):
+        raise AppError("VALIDATION", status=400, detail="Broker market data is not supported")
+    enc = __import__("core.security", fromlist=["get_encryption"]).get_encryption()
+    creds = {key: enc.decrypt(value) for key, value in (acc.get("credentials_encrypted") or {}).items()}
+    return await plugin.get_market_quotes(creds, symbols, exchange)

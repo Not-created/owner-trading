@@ -32,6 +32,7 @@ import OrdersPage from "@/pages/OrdersPage";
 import PositionsPage from "@/pages/PositionsPage";
 import StrategiesPage from "@/pages/StrategiesPage";
 import BrokerDataPage from "@/pages/BrokerDataPage";
+import MarketDataPage from "@/pages/MarketDataPage";
 
 
 /*
@@ -165,6 +166,7 @@ function AppRoutes() {
       <Route path="/holdings" element={<Shell><BrokerDataPage title="Holdings" endpoint="/brokers/holdings" dataKey="holdings" /></Shell>} />
       <Route path="/funds" element={<Shell><BrokerDataPage title="Funds" endpoint="/brokers/funds" dataKey="funds" /></Shell>} />
       <Route path="/trade-history" element={<Shell><BrokerDataPage title="Trade History" endpoint="/brokers/trade-history" dataKey="trade_history" /></Shell>} />
+      <Route path="/market-data" element={<Shell><MarketDataPage /></Shell>} />
 
 
       {/* ---------------------------------------------------------------- */}

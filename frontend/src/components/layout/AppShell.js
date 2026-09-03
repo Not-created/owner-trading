@@ -19,6 +19,7 @@ const NAV = [
   { to: "/holdings", label: "Holdings", icon: Server },
   { to: "/funds", label: "Funds", icon: Server },
   { to: "/trade-history", label: "Trade History", icon: Server },
+  { to: "/market-data", label: "Market Data", icon: Server },
   { to: "/strategies", label: "Strategies", icon: Puzzle, tid: TEST_IDS.shell.navStrategies },
   { to: "/plugins", label: "Plugins", icon: Puzzle, tid: TEST_IDS.shell.navPlugins },
   { to: "/roles", label: "Roles", icon: Shield, tid: TEST_IDS.shell.navRoles },

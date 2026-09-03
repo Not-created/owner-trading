@@ -384,6 +384,40 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
         self._raise_for_error(response)
         return self._response_rows(response)
 
+    async def get_market_quotes(
+        self,
+        credentials: dict[str, Any],
+        symbols: list[str],
+        exchange: str = "NSE",
+    ) -> list[dict[str, Any]]:
+        """Resolve symbols to tokens and retrieve real Kotak quotes."""
+        client = await self._ensure_client(credentials)
+        segment = {
+            "NSE": "nse_cm",
+            "BSE": "bse_cm",
+            "NFO": "nse_fo",
+            "BFO": "bse_fo",
+            "MCX": "mcx_fo",
+        }.get(exchange.upper(), exchange.lower())
+        instruments = []
+        for symbol in symbols:
+            result = await asyncio.to_thread(
+                client.search_scrip,
+                exchange_segment=segment,
+                symbol=symbol,
+            )
+            self._raise_for_error(result)
+            rows = self._response_rows(result)
+            if not rows:
+                raise RuntimeError(f"Kotak Neo instrument not found: {symbol}")
+            token = rows[0].get("pSymbol") or rows[0].get("instrument_token") or rows[0].get("token")
+            if not token:
+                raise RuntimeError(f"Kotak Neo instrument token unavailable: {symbol}")
+            instruments.append({"exchange_segment": segment, "instrument_token": str(token)})
+        response = await asyncio.to_thread(client.quotes, instrument_tokens=instruments, quote_type="all")
+        self._raise_for_error(response)
+        return self._response_rows(response)
+
     @staticmethod
     def _raise_for_error(response: Any) -> None:
         if isinstance(response, dict) and (response.get("Error") or response.get("Error Message")):

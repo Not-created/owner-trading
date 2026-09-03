@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from modules.auth.deps import get_current_user
@@ -30,6 +30,7 @@ from modules.broker_core.orders import (
     create_order,
     get_funds,
     get_holdings,
+    get_market_quotes,
     get_order,
     get_orders,
     get_positions,
@@ -445,3 +446,16 @@ async def fetch_trade_history(
             account_id=account_id,
         )
     }
+
+
+@router.get("/quotes")
+async def fetch_broker_quotes(
+    account_id: str,
+    symbols: str,
+    exchange: str = "NSE",
+    user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    requested = [value.strip().upper() for value in symbols.split(",") if value.strip()]
+    if not requested:
+        raise HTTPException(status_code=400, detail="At least one symbol is required")
+    return {"quotes": await get_market_quotes(_user_id(user), account_id, requested, exchange)}
