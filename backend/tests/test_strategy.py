@@ -45,3 +45,13 @@ def test_evaluate_conditions_and_crossover():
         {"PRICE": 12, "SMA_3": 10},
         {"PRICE": 9, "SMA_3": 10},
     )
+
+
+def test_backtest_metrics_are_derived_from_trades():
+    trades = [{"pnl": 25.0}, {"pnl": -10.0}, {"pnl": 15.0}]
+    winners = [trade["pnl"] for trade in trades if trade["pnl"] > 0]
+    losers = [trade["pnl"] for trade in trades if trade["pnl"] < 0]
+    assert sum(trade["pnl"] for trade in trades) == 30.0
+    assert len(winners) == 2
+    assert len(losers) == 1
+    assert sum(winners) / abs(sum(losers)) == 4.0

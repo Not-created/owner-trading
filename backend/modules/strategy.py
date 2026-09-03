@@ -114,7 +114,9 @@ async def update_strategy(user_id: str, strategy_id: str, payload: dict[str, Any
     definition = validate_strategy(payload)
     update = {**definition, "version": int(strategy.get("version", 1)) + 1, "status": "DRAFT", "updated_at": now()}
     await get_db().strategies.update_one({"user_id": user_id, "strategy_id": strategy_id}, {"$set": update})
-    return await get_owned_strategy(user_id, strategy_id)
+    result = await get_owned_strategy(user_id, strategy_id)
+    result.pop("_id", None)
+    return result
 
 
 async def set_strategy_status(user_id: str, strategy_id: str, status: str) -> dict[str, Any]:
@@ -179,8 +181,11 @@ def evaluate_conditions(conditions: list[dict[str, Any]], values: dict[str, floa
 
 async def run_backtest(user_id: str, strategy_id: str, request: dict[str, Any]) -> dict[str, Any]:
     strategy = await get_owned_strategy(user_id, strategy_id)
-    start = datetime.fromisoformat(str(request.get("start")).replace("Z", "+00:00"))
-    end = datetime.fromisoformat(str(request.get("end")).replace("Z", "+00:00"))
+    try:
+        start = datetime.fromisoformat(str(request.get("start")).replace("Z", "+00:00"))
+        end = datetime.fromisoformat(str(request.get("end")).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise AppError("VALIDATION", status=400, detail="Backtest start and end must be valid ISO dates") from exc
     if start >= end:
         raise AppError("VALIDATION", status=400, detail="Backtest start must be before end")
     initial_capital = float(request.get("initial_capital", 0))
