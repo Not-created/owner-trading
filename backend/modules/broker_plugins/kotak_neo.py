@@ -254,6 +254,15 @@ class KotakNeoBrokerPlugin(BrokerPluginBase):
             except Exception as exc:
                 return {"ok": False, "error": self._safe_error(exc)}
 
+    async def test_connection(self, credentials: dict[str, Any]) -> BrokerHealth:
+        """Authenticate through Kotak without changing persisted account state."""
+        result = await self.account_info(credentials)
+        return BrokerHealth(
+            ok=bool(result.get("ok")),
+            detail=result.get("error") or "Kotak Neo authentication succeeded",
+            latency_ms=int(result.get("latency_ms") or 0),
+        )
+
     def _require_client(self) -> Any:
         if self._client is None or not self._session.get("authenticated"):
             raise RuntimeError("Kotak Neo session is not connected")

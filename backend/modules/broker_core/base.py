@@ -178,6 +178,13 @@ class BrokerPluginBase(ABC):
         """
         return {}
 
+    async def test_connection(
+        self,
+        credentials: dict[str, Any],
+    ) -> BrokerHealth:
+        """Test credentials using the adapter's real authentication path."""
+        return await self.connect(credentials)
+
     # ------------------------------------------------------------------
     # Backward-compatible trading helpers
     # ------------------------------------------------------------------

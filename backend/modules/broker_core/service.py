@@ -723,10 +723,7 @@ async def connect_account(
     )
 
     try:
-        result = await plugin.connect(
-            account_id=account_id,
-            credentials=credentials,
-        )
+        result = await plugin.connect(credentials)
 
         elapsed = (
             datetime.now(
