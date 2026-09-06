@@ -8,11 +8,24 @@ export const TEST_IDS = {
     error: "login-error",
     totp: "login-totp",
   },
+
   shell: {
     sidebar: "app-sidebar",
     topbar: "app-topbar",
+
+    /*
+     * Mobile navigation controls
+     *
+     * These IDs are used by AppShell for deterministic testing and
+     * accessibility-oriented automation of the responsive navigation.
+     */
+    mobileDrawer: "app-mobile-drawer",
+    mobileClose: "app-mobile-close",
+    mobileToggle: "app-mobile-toggle",
+
     logout: "app-logout",
     ticker: "app-ticker",
+
     navDashboard: "nav-dashboard",
     navOwnerControl: "nav-owner-control",
     navRoles: "nav-roles",
@@ -25,8 +38,10 @@ export const TEST_IDS = {
     navSettings: "nav-settings",
     navProfile: "nav-profile",
     navLogs: "nav-logs",
+
     userMenu: "app-user-menu",
   },
+
   dashboard: {
     root: "dashboard-root",
     aiStatus: "dashboard-ai-status",
@@ -34,6 +49,7 @@ export const TEST_IDS = {
     systemStatus: "dashboard-system-status",
     recentLogs: "dashboard-recent-logs",
   },
+
   ownerControl: {
     root: "owner-control-root",
     tabOverview: "oc-tab-overview",
@@ -46,41 +62,51 @@ export const TEST_IDS = {
     devOutput: "dev-ask-output",
     approvalNew: "dev-approval-new",
   },
+
   ai: {
     root: "ai-root",
     healthBtn: "ai-health-btn",
     chatInput: "ai-chat-input",
     chatSend: "ai-chat-send",
     chatOutput: "ai-chat-output",
+
     providerCard: (id) => `ai-provider-${id}`,
     setDefault: (id) => `ai-set-default-${id}`,
+
     presetsList: "ai-presets-list",
     presetNewName: "ai-preset-new-name",
     presetNewPrompt: "ai-preset-new-prompt",
     presetCreate: "ai-preset-create",
+
     presetRun: (id) => `ai-preset-run-${id}`,
     presetDelete: (id) => `ai-preset-delete-${id}`,
   },
+
   brokers: {
     root: "brokers-root",
     pluginsList: "brokers-plugins-list",
     accountsList: "brokers-accounts-list",
     emptyPlugins: "brokers-empty-plugins",
+
     addBtn: (id) => `brokers-add-${id}`,
+
     modal: "brokers-modal",
     modalPlugin: "brokers-modal-plugin",
     modalLabel: "brokers-modal-label",
-    modalCred: (k) => `brokers-modal-cred-${k}`,
+    modalCred: (key) => `brokers-modal-cred-${key}`,
     modalSubmit: "brokers-modal-submit",
+
     connect: (id) => `brokers-connect-${id}`,
     disconnect: (id) => `brokers-disconnect-${id}`,
     remove: (id) => `brokers-remove-${id}`,
     primary: (id) => `brokers-primary-${id}`,
   },
+
   plugins: {
     root: "plugins-root",
     empty: "plugins-empty",
   },
+
   settings: {
     root: "settings-root",
     tabSystem: "settings-tab-system",
@@ -89,37 +115,47 @@ export const TEST_IDS = {
     tabNotifications: "settings-tab-notifications",
     save: "settings-save",
   },
+
   profile: {
     root: "profile-root",
     displayName: "profile-display-name",
     save: "profile-save",
+
     changePwCurrent: "profile-pw-current",
     changePwNew: "profile-pw-new",
     changePwSubmit: "profile-pw-submit",
+
     sessions: "profile-sessions",
     logoutAll: "profile-logout-all",
+
     twoFA: "profile-2fa",
     twoFAEnable: "profile-2fa-enable",
     twoFAVerify: "profile-2fa-verify",
     twoFACode: "profile-2fa-code",
     twoFADisable: "profile-2fa-disable",
+
     trustedDevices: "profile-trusted-devices",
   },
+
   roles: {
     root: "roles-root",
   },
+
   logs: {
     root: "logs-root",
     search: "logs-search",
     filterLevel: "logs-filter-level",
     filterCategory: "logs-filter-category",
   },
+
   orders: {
     root: "orders-root",
   },
+
   positions: {
     root: "positions-root",
   },
+
   strategies: {
     root: "strategies-root",
   },
