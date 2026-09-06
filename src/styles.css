@@ -1101,3 +1101,365 @@ html[data-theme="light"] {
    22. ALERTS
    ========================================================================== */
  
+.ot-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+
+  padding: 12px;
+
+  border: 1px solid var(--ot-border);
+  border-radius: var(--ot-radius-md);
+
+  background: var(--ot-surface-2);
+}
+
+.ot-alert-success {
+  border-color: rgba(24, 217, 148, 0.30);
+  background: var(--ot-buy-soft);
+}
+
+.ot-alert-danger {
+  border-color: rgba(255, 82, 100, 0.30);
+  background: var(--ot-sell-soft);
+}
+
+.ot-alert-warning {
+  border-color: rgba(255, 181, 46, 0.30);
+  background: rgba(255, 181, 46, 0.10);
+}
+
+.ot-alert-info {
+  border-color: rgba(69, 168, 255, 0.30);
+  background: var(--ot-primary-soft);
+}
+
+
+/* ==========================================================================
+   23. MASTER KILL SWITCH / EMERGENCY SURFACE
+   ========================================================================== */
+
+.ot-emergency {
+  background:
+    linear-gradient(
+      135deg,
+      var(--ot-sell-soft),
+      transparent
+    );
+
+  border: 1px solid rgba(255, 82, 100, 0.42);
+  border-radius: var(--ot-radius-lg);
+}
+
+.ot-emergency-title {
+  color: var(--ot-danger);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+
+/* ==========================================================================
+   24. MODAL / OVERLAY
+   =======================================================================
+=== */
+.ot-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: var(--ot-overlay);
+  backdrop-filter: blur(4px);
+}
+
+.ot-modal {
+  width: min(100%, 560px);
+  max-height: min(90vh, 760px);
+  overflow: auto;
+
+  background: var(--ot-surface);
+  color: var(--ot-text);
+
+  border: 1px solid var(--ot-border);
+  border-radius: var(--ot-radius-lg);
+
+  box-shadow: var(--ot-shadow-lg);
+}
+
+.ot-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 16px;
+
+  border-bottom: 1px solid var(--ot-border-soft);
+}
+
+.ot-modal-body {
+  padding: 16px;
+}
+
+.ot-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+
+  padding: 14px 16px;
+
+  border-top: 1px solid var(--ot-border-soft);
+}
+
+
+/* ==========================================================================
+   25. LOADING
+   ========================================================================== */
+
+.ot-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  color: var(--ot-text-muted);
+}
+
+.ot-spinner {
+  width: 18px;
+  height: 18px;
+
+  border: 2px solid var(--ot-border);
+  border-top-color: var(--ot-primary);
+  border-radius: 50%;
+
+  animation: ot-spin 0.8s linear infinite;
+}
+
+@keyframes ot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* ==========================================================================
+   26. EMPTY / ERROR STATES
+   ========================================================================== */
+
+.ot-empty,
+.ot-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 180px;
+  padding: 24px;
+
+  text-align: center;
+
+  color: var(--ot-text-muted);
+}
+
+.ot-error {
+  color: var(--ot-danger);
+}
+
+
+/* ==========================================================================
+   27. LOG TERMINAL
+   ========================================================================== */
+
+.ot-log {
+  font-family:
+    "JetBrains Mono",
+    "SFMono-Regular",
+    Consolas,
+    monospace;
+
+  font-size: 0.72rem;
+}
+
+.ot-log-row {
+  display: grid;
+  grid-template-columns: 80px 75px minmax(0, 1fr);
+  gap: 10px;
+
+  padding: 8px 10px;
+
+  border-bottom: 1px solid var(--ot-border-soft);
+}
+
+.ot-log-info {
+  color: var(--ot-info);
+}
+
+.ot-log-success {
+  color: var(--ot-success);
+}
+
+.ot-log-warning {
+  color: var(--ot-warning);
+}
+
+.ot-log-error {
+  color: var(--ot-danger);
+}
+
+
+/* ==========================================================================
+   28. GRID HELPERS
+   ========================================================================== */
+
+.ot-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.ot-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ot-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ot-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ot-grid-auto {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+
+/* ==========================================================================
+   29. FLEX HELPERS
+   ========================================================================== */
+
+.ot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ot-row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ot-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+
+/* ==========================================================================
+   30. SCROLLBARS
+   ========================================================================== */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ot-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--ot-border-strong);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--ot-text-faint);
+}
+
+
+/* ==========================================================================
+   31. SELECTION
+   ========================================================================== */
+
+::selection {
+  background: var(--ot-primary);
+  color: #ffffff;
+}
+
+
+/* ==========================================================================
+   32. FOCUS ACCESSIBILITY
+   ========================================================================== */
+
+:focus-visible {
+  outline: 2px solid var(--ot-primary);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--ot-primary);
+  outline-offset: 2px;
+}
+
+
+/* ==========================================================================
+   33. DESKTOP APPLICATION LAYOUT
+   ========================================================================== */
+
+.ot-layout {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+
+  min-height: 100vh;
+}
+
+.ot-main {
+  min-width: 0;
+  min-height: 100vh;
+  background: var(--ot-bg);
+}
+
+.ot-content {
+  width: 100%;
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+
+/* ==========================================================================
+   34. MOBILE NAV / DRAWER
+   ========================================================================== */
+
+.ot-mobile-overlay {
+  display: none;
+}
+
+.ot-mobile-drawer {
+  display: none;
+}
+
+
+/* ==========================================================================
+   35. RESPONSIVE — TABLET
+   ========================================================================== */
+
