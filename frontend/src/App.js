@@ -10,6 +10,8 @@ import {
 import { Toaster } from "sonner";
 
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
+
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppShell from "@/components/layout/AppShell";
 
@@ -41,7 +43,7 @@ import MarketDataPage from "@/pages/MarketDataPage";
 |--------------------------------------------------------------------------
 |
 | Every authenticated application page goes through the same shell.
-| This keeps authentication, navigation and global layout centralized.
+| Authentication, navigation and global layout remain centralized.
 |
 */
 
@@ -59,7 +61,7 @@ function Shell({ children }) {
 | Application Routes
 |--------------------------------------------------------------------------
 |
-| Keep route definitions centralized.
+| Route definitions remain centralized.
 |
 | Future modules should be added as independent pages/routes rather than
 | modifying authentication or the application shell.
@@ -163,10 +165,53 @@ function AppRoutes() {
         }
       />
 
-      <Route path="/holdings" element={<Shell><BrokerDataPage title="Holdings" endpoint="/brokers/holdings" dataKey="holdings" /></Shell>} />
-      <Route path="/funds" element={<Shell><BrokerDataPage title="Funds" endpoint="/brokers/funds" dataKey="funds" /></Shell>} />
-      <Route path="/trade-history" element={<Shell><BrokerDataPage title="Trade History" endpoint="/brokers/trade-history" dataKey="trade_history" /></Shell>} />
-      <Route path="/market-data" element={<Shell><MarketDataPage /></Shell>} />
+      <Route
+        path="/holdings"
+        element={
+          <Shell>
+            <BrokerDataPage
+              title="Holdings"
+              endpoint="/brokers/holdings"
+              dataKey="holdings"
+            />
+          </Shell>
+        }
+      />
+
+      <Route
+        path="/funds"
+        element={
+          <Shell>
+            <BrokerDataPage
+              title="Funds"
+              endpoint="/brokers/funds"
+              dataKey="funds"
+            />
+          </Shell>
+        }
+      />
+
+      <Route
+        path="/trade-history"
+        element={
+          <Shell>
+            <BrokerDataPage
+              title="Trade History"
+              endpoint="/brokers/trade-history"
+              dataKey="trade_history"
+            />
+          </Shell>
+        }
+      />
+
+      <Route
+        path="/market-data"
+        element={
+          <Shell>
+            <MarketDataPage />
+          </Shell>
+        }
+      />
 
 
       {/* ---------------------------------------------------------------- */}
@@ -249,39 +294,65 @@ function AppRoutes() {
 
 /*
 |--------------------------------------------------------------------------
+| Themed Toast Layer
+|--------------------------------------------------------------------------
+|
+| ThemeProvider owns the application's global theme.
+| This component reads the active theme and keeps Sonner synchronized
+| with the rest of the interface.
+|
+*/
+
+function ThemedToaster() {
+  const { theme } = useTheme();
+
+  return (
+    <Toaster
+      position="bottom-right"
+      theme={theme}
+      toastOptions={{
+        className: "owner-trading-toast",
+        style: {
+          fontFamily: "JetBrains Mono, monospace",
+          fontSize: "12px",
+          borderRadius: "2px",
+        },
+      }}
+    />
+  );
+}
+
+
+/*
+|--------------------------------------------------------------------------
 | Root Application
 |--------------------------------------------------------------------------
+|
+| ThemeProvider is intentionally placed above the router and authenticated
+| application so the global theme is available to every page and component.
+|
 */
 
 export default function App() {
   return (
-    <div className="dark min-h-screen">
+    <ThemeProvider>
 
-      <BrowserRouter>
+      <div className="min-h-screen">
 
-        <AuthProvider>
+        <BrowserRouter>
 
-          <AppRoutes />
+          <AuthProvider>
 
-          <Toaster
-            position="bottom-right"
-            theme="dark"
-            toastOptions={{
-              style: {
-                background: "#121214",
-                border: "1px solid #27272A",
-                color: "#F4F4F5",
-                fontFamily: "JetBrains Mono, monospace",
-                fontSize: "12px",
-                borderRadius: "2px",
-              },
-            }}
-          />
+            <AppRoutes />
 
-        </AuthProvider>
+            <ThemedToaster />
 
-      </BrowserRouter>
+          </AuthProvider>
 
-    </div>
+        </BrowserRouter>
+
+      </div>
+
+    </ThemeProvider>
   );
-          }
+}
