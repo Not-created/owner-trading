@@ -1,0 +1,1103 @@
+/*
+|--------------------------------------------------------------------------
+| OWNER TRADING — GLOBAL DESIGN SYSTEM
+|--------------------------------------------------------------------------
+|
+| Single global stylesheet for the complete application.
+|
+| Includes:
+|   • Dark / Light theme
+|   • Trading terminal UI
+|   • Responsive layout
+|   • Cards / panels
+|   • Tables
+|   • Forms
+|   • Buttons
+|   • Status indicators
+|   • Charts / market surfaces
+|   • Navigation
+|   • Modals
+|   • Alerts
+|   • Mobile support
+|   • Accessibility
+|
+| Theme contract:
+|
+|   <html data-theme="dark">
+|   <html data-theme="light">
+|
+| context.jsx owns the theme state.
+| pages/components consume semantic CSS variables.
+|
+|--------------------------------------------------------------------------
+*/
+
+
+/* ==========================================================================
+   1. RESET
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  font-size: 16px;
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  background: var(--ot-bg);
+  color: var(--ot-text);
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+}
+
+button,
+a,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+img {
+  height: auto;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+
+/* ==========================================================================
+   2. GLOBAL THEME TOKENS — DARK
+   ========================================================================== */
+
+:root,
+html[data-theme="dark"] {
+
+  /* Backgrounds */
+  --ot-bg: #070b12;
+  --ot-bg-soft: #0b111b;
+  --ot-bg-elevated: #0e1724;
+  --ot-surface: #101b2a;
+  --ot-surface-2: #132033;
+  --ot-surface-hover: #17283e;
+
+  /* Borders */
+  --ot-border: #26364a;
+  --ot-border-soft: #1b2a3d;
+  --ot-border-strong: #36516e;
+
+  /* Text */
+  --ot-text: #f2f7fc;
+  --ot-text-soft: #c5d1de;
+  --ot-text-muted: #8998a9;
+  --ot-text-faint: #5d6d7f;
+
+  /* Primary */
+  --ot-primary: #1683ff;
+  --ot-primary-hover: #3997ff;
+  --ot-primary-active: #0871e8;
+  --ot-primary-soft: rgba(22, 131, 255, 0.14);
+
+  /* Accent */
+  --ot-accent: #56b4ff;
+  --ot-accent-soft: rgba(86, 180, 255, 0.12);
+
+  /* Trading */
+  --ot-buy: #16d889;
+  --ot-buy-soft: rgba(22, 216, 137, 0.12);
+
+  --ot-sell: #ff5264;
+  --ot-sell-soft: rgba(255, 82, 100, 0.12);
+
+  --ot-profit: #18d994;
+  --ot-loss: #ff5365;
+
+  /* Status */
+  --ot-success: #18d994;
+  --ot-warning: #ffb52e;
+  --ot-danger: #ff5264;
+  --ot-info: #45a8ff;
+  --ot-neutral: #8998a9;
+
+  /* Charts */
+  --ot-chart-grid: rgba(128, 158, 190, 0.12);
+  --ot-chart-axis: #718197;
+  --ot-chart-up: #18d994;
+  --ot-chart-down: #ff5264;
+
+  /* Shadows */
+  --ot-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.24);
+  --ot-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.32);
+  --ot-shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.42);
+
+  /* Radius */
+  --ot-radius-sm: 4px;
+  --ot-radius-md: 7px;
+  --ot-radius-lg: 10px;
+  --ot-radius-xl: 14px;
+
+  /* Focus */
+  --ot-focus: rgba(22, 131, 255, 0.45);
+
+  /* Overlay */
+  --ot-overlay: rgba(2, 7, 13, 0.72);
+}
+
+
+/* ==========================================================================
+   3. GLOBAL THEME TOKENS — LIGHT
+   ========================================================================== */
+
+html[data-theme="light"] {
+
+  /* Backgrounds */
+  --ot-bg: #f3f7fb;
+  --ot-bg-soft: #edf3f8;
+  --ot-bg-elevated: #ffffff;
+  --ot-surface: #ffffff;
+  --ot-surface-2: #f7fafd;
+  --ot-surface-hover: #edf5fc;
+
+  /* Borders */
+  --ot-border: #d5e0ea;
+  --ot-border-soft: #e4ebf2;
+  --ot-border-strong: #b7c9da;
+
+  /* Text */
+  --ot-text: #122033;
+  --ot-text-soft: #33465b;
+  --ot-text-muted: #607386;
+  --ot-text-faint: #8798a9;
+
+  /* Primary */
+  --ot-primary: #0876e8;
+  --ot-primary-hover: #0569d2;
+  --ot-primary-active: #045bb6;
+  --ot-primary-soft: rgba(8, 118, 232, 0.10);
+
+  /* Accent */
+  --ot-accent: #0876e8;
+  --ot-accent-soft: rgba(8, 118, 232, 0.08);
+
+  /* Trading */
+  --ot-buy: #079b61;
+  --ot-buy-soft: rgba(7, 155, 97, 0.10);
+
+  --ot-sell: #d92f45;
+  --ot-sell-soft: rgba(217, 47, 69, 0.09);
+
+  --ot-profit: #078c58;
+  --ot-loss: #d92f45;
+
+  /* Status */
+  --ot-success: #078c58;
+  --ot-warning: #bd7100;
+  --ot-danger: #d92f45;
+  --ot-info: #0876e8;
+  --ot-neutral: #607386;
+
+  /* Charts */
+  --ot-chart-grid: rgba(65, 92, 118, 0.12);
+  --ot-chart-axis: #65788d;
+  --ot-chart-up: #078c58;
+  --ot-chart-down: #d92f45;
+
+  /* Shadows */
+  --ot-shadow-sm: 0 2px 8px rgba(28, 55, 82, 0.08);
+  --ot-shadow-md: 0 8px 24px rgba(28, 55, 82, 0.11);
+  --ot-shadow-lg: 0 18px 48px rgba(28, 55, 82, 0.15);
+
+  /* Focus */
+  --ot-focus: rgba(8, 118, 232, 0.30);
+
+  /* Overlay */
+  --ot-overlay: rgba(10, 24, 38, 0.48);
+}
+
+
+/* ==========================================================================
+   4. ROOT APPLICATION
+   ========================================================================== */
+
+#root {
+  min-height: 100vh;
+  background: var(--ot-bg);
+}
+
+.ot-app {
+  min-height: 100vh;
+  background: var(--ot-bg);
+  color: var(--ot-text);
+}
+
+
+/* ==========================================================================
+   5. TYPOGRAPHY
+   ========================================================================== */
+
+.ot-mono,
+.ot-number,
+.ot-price,
+.ot-pnl,
+.ot-symbol,
+.ot-code {
+  font-family:
+    "JetBrains Mono",
+    "SFMono-Regular",
+    Consolas,
+    "Liberation Mono",
+    monospace;
+}
+
+.ot-heading {
+  margin: 0;
+  color: var(--ot-text);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.ot-title {
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.ot-subtitle {
+  color: var(--ot-text-muted);
+  font-size: 0.875rem;
+}
+
+.ot-muted {
+  color: var(--ot-text-muted);
+}
+
+.ot-faint {
+  color: var(--ot-text-faint);
+}
+
+.ot-positive {
+  color: var(--ot-profit);
+}
+
+.ot-negative {
+  color: var(--ot-loss);
+}
+
+.ot-buy {
+  color: var(--ot-buy);
+}
+
+.ot-sell {
+  color: var(--ot-sell);
+}
+
+
+/* ==========================================================================
+   6. LINKS
+   ========================================================================== */
+
+.ot-link {
+  color: var(--ot-primary);
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.ot-link:hover {
+  color: var(--ot-primary-hover);
+  text-decoration: underline;
+}
+
+
+/* ==========================================================================
+   7. PANELS / CARDS
+   ========================================================================== */
+
+.ot-panel {
+  background: var(--ot-surface);
+  border: 1px solid var(--ot-border);
+  border-radius: var(--ot-radius-lg);
+  box-shadow: var(--ot-shadow-sm);
+}
+
+.ot-panel-soft {
+  background: var(--ot-surface-2);
+  border: 1px solid var(--ot-border-soft);
+  border-radius: var(--ot-radius-md);
+}
+
+.ot-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  min-height: 52px;
+  padding: 12px 16px;
+
+  border-bottom: 1px solid var(--ot-border-soft);
+}
+
+.ot-panel-body {
+  padding: 16px;
+}
+
+.ot-card {
+  padding: 16px;
+
+  background: var(--ot-surface);
+  border: 1px solid var(--ot-border);
+  border-radius: var(--ot-radius-lg);
+
+  box-shadow: var(--ot-shadow-sm);
+}
+
+.ot-card-hover {
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.ot-card-hover:hover {
+  background: var(--ot-surface-hover);
+  border-color: var(--ot-border-strong);
+  box-shadow: var(--ot-shadow-md);
+}
+
+
+/* ==========================================================================
+   8. METRIC CARDS
+   ========================================================================== */
+
+.ot-metric {
+  min-width: 0;
+  padding: 15px;
+
+  background: var(--ot-surface);
+  border: 1px solid var(--ot-border);
+  border-radius: var(--ot-radius-lg);
+}
+
+.ot-metric-label {
+  margin-bottom: 7px;
+  color: var(--ot-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ot-metric-value {
+  color: var(--ot-text);
+  font-size: 1.35rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.ot-metric-change {
+  margin-top: 6px;
+  font-family:
+    "JetBrains Mono",
+    "SFMono-Regular",
+    Consolas,
+    monospace;
+  font-size: 0.75rem;
+}
+
+
+/* ==========================================================================
+   9. BUTTONS
+   ========================================================================== */
+
+.ot-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 38px;
+  padding: 0 14px;
+
+  border: 1px solid transparent;
+  border-radius: var(--ot-radius-md);
+
+  background: var(--ot-surface-2);
+  color: var(--ot-text);
+
+  font-size: 0.82rem;
+  font-weight: 650;
+
+  cursor: pointer;
+  user-select: none;
+
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    opacity 140ms ease,
+    transform 80ms ease;
+}
+
+.ot-btn:hover {
+  background: var(--ot-surface-hover);
+  border-color: var(--ot-border-strong);
+}
+
+.ot-btn:active {
+  transform: translateY(1px);
+}
+
+.ot-btn:disabled,
+.ot-btn[aria-disabled="true"] {
+  opacity: 0.48;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.ot-btn-primary {
+  background: var(--ot-primary);
+  color: #ffffff;
+}
+
+.ot-btn-primary:hover {
+  background: var(--ot-primary-hover);
+  border-color: var(--ot-primary-hover);
+}
+
+.ot-btn-success {
+  background: var(--ot-buy);
+  color: #ffffff;
+}
+
+.ot-btn-danger {
+  background: var(--ot-danger);
+  color: #ffffff;
+}
+
+.ot-btn-warning {
+  background: var(--ot-warning);
+  color: #101010;
+}
+
+.ot-btn-outline {
+  background: transparent;
+  border-color: var(--ot-border);
+}
+
+.ot-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.ot-btn-sm {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 0.75rem;
+}
+
+.ot-btn-lg {
+  min-height: 44px;
+  padding: 0 18px;
+}
+
+
+/* ==========================================================================
+   10. FORM CONTROLS
+   ========================================================================== */
+
+.ot-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.ot-label {
+  color: var(--ot-text-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.ot-input,
+.ot-select,
+.ot-textarea {
+  width: 100%;
+
+  background: var(--ot-bg-soft);
+  color: var(--ot-text);
+
+  border: 1px solid var(--ot-border);
+  border-radius: var(--ot-radius-md);
+
+  outline: none;
+
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+.ot-input,
+.ot-select {
+  min-height: 40px;
+  padding: 0 11px;
+}
+
+.ot-textarea {
+  min-height: 100px;
+  padding: 10px 11px;
+  resize: vertical;
+}
+
+.ot-input::placeholder,
+.ot-textarea::placeholder {
+  color: var(--ot-text-faint);
+}
+
+.ot-input:hover,
+.ot-select:hover,
+.ot-textarea:hover {
+  border-color: var(--ot-border-strong);
+}
+
+.ot-input:focus,
+.ot-select:focus,
+.ot-textarea:focus {
+  border-color: var(--ot-primary);
+  box-shadow: 0 0 0 3px var(--ot-focus);
+}
+
+.ot-input:disabled,
+.ot-select:disabled,
+.ot-textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+
+/* ==========================================================================
+   11. STATUS BADGES
+   ========================================================================== */
+
+.ot-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  min-height: 24px;
+  padding: 0 8px;
+
+  border: 1px solid transparent;
+  border-radius: 999px;
+
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ot-badge-success {
+  color: var(--ot-success);
+  background: var(--ot-buy-soft);
+  border-color: rgba(24, 217, 148, 0.22);
+}
+
+.ot-badge-danger {
+  color: var(--ot-danger);
+  background: var(--ot-sell-soft);
+  border-color: rgba(255, 82, 100, 0.22);
+}
+
+.ot-badge-warning {
+  color: var(--ot-warning);
+  background: rgba(255, 181, 46, 0.12);
+  border-color: rgba(255, 181, 46, 0.22);
+}
+
+.ot-badge-info {
+  color: var(--ot-info);
+  background: var(--ot-primary-soft);
+  border-color: rgba(69, 168, 255, 0.22);
+}
+
+.ot-badge-neutral {
+  color: var(--ot-text-muted);
+  background: var(--ot-surface-2);
+  border-color: var(--ot-border);
+}
+
+
+/* ==========================================================================
+   12. LIVE STATUS DOT
+   ========================================================================== */
+
+.ot-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ot-status-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+
+  border-radius: 50%;
+  background: var(--ot-neutral);
+}
+
+.ot-status-dot-success {
+  background: var(--ot-success);
+  box-shadow: 0 0 0 3px var(--ot-buy-soft);
+}
+
+.ot-status-dot-danger {
+  background: var(--ot-danger);
+  box-shadow: 0 0 0 3px var(--ot-sell-soft);
+}
+
+.ot-status-dot-warning {
+  background: var(--ot-warning);
+  box-shadow: 0 0 0 3px rgba(255, 181, 46, 0.12);
+}
+
+.ot-status-dot-pulse {
+  animation: ot-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes ot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.42;
+  }
+}
+
+
+/* ==========================================================================
+   13. TABLES
+   ========================================================================== */
+
+.ot-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--ot-border);
+  border-radius: var(--ot-radius-lg);
+}
+
+.ot-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.ot-table th {
+  padding: 11px 12px;
+
+  background: var(--ot-surface-2);
+  color: var(--ot-text-muted);
+
+  border-bottom: 1px solid var(--ot-border);
+
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ot-table td {
+  padding: 11px 12px;
+
+  color: var(--ot-text-soft);
+
+  border-bottom: 1px solid var(--ot-border-soft);
+
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.ot-table tbody tr {
+  transition: background-color 120ms ease;
+}
+
+.ot-table tbody tr:hover {
+  background: var(--ot-surface-hover);
+}
+
+.ot-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+
+/* ==========================================================================
+   14. TRADING SIDE
+   ========================================================================== */
+
+.ot-side-buy {
+  color: var(--ot-buy);
+  font-weight: 700;
+}
+
+.ot-side-sell {
+  color: var(--ot-sell);
+  font-weight: 700;
+}
+
+.ot-buy-bg {
+  background: var(--ot-buy-soft);
+}
+
+.ot-sell-bg {
+  background: var(--ot-sell-soft);
+}
+
+
+/* ==========================================================================
+   15. CHART SURFACE
+   ========================================================================== */
+
+.ot-chart {
+  position: relative;
+  min-height: 240px;
+
+  overflow: hidden;
+
+  background: var(--ot-bg-soft);
+  border: 1px solid var(--ot-border);
+  border-radius: var(--ot-radius-lg);
+}
+
+.ot-chart-grid {
+  background-image:
+    linear-gradient(
+      to right,
+      var(--ot-chart-grid) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      var(--ot-chart-grid) 1px,
+      transparent 1px
+    );
+
+  background-size: 40px 40px;
+}
+
+
+/* ==========================================================================
+   16. MARKET TICKER
+   ========================================================================== */
+
+.ot-ticker {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+
+  min-width: 0;
+  overflow-x: auto;
+
+  padding: 8px 12px;
+
+  background: var(--ot-surface);
+  border-bottom: 1px solid var(--ot-border);
+
+  scrollbar-width: none;
+}
+
+.ot-ticker::-webkit-scrollbar {
+  display: none;
+}
+
+.ot-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  flex: 0 0 auto;
+
+  font-family:
+    "JetBrains Mono",
+    "SFMono-Regular",
+    Consolas,
+    monospace;
+
+  font-size: 0.72rem;
+}
+
+.ot-ticker-symbol {
+  color: var(--ot-text-soft);
+  font-weight: 700;
+}
+
+.ot-ticker-price {
+  color: var(--ot-text);
+}
+
+.ot-ticker-change-up {
+  color: var(--ot-profit);
+}
+
+.ot-ticker-change-down {
+  color: var(--ot-loss);
+}
+
+
+/* ==========================================================================
+   17. NAVIGATION
+   ========================================================================== */
+
+.ot-nav {
+  background: var(--ot-surface);
+  border-right: 1px solid var(--ot-border);
+}
+
+.ot-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  min-height: 38px;
+  padding: 0 11px;
+
+  border-radius: var(--ot-radius-md);
+
+  color: var(--ot-text-muted);
+
+  font-size: 0.78rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.ot-nav-item:hover {
+  background: var(--ot-surface-hover);
+  color: var(--ot-text);
+}
+
+.ot-nav-item.active,
+.ot-nav-item[aria-current="page"] {
+  background: var(--ot-primary-soft);
+  color: var(--ot-primary);
+}
+
+
+/* ==========================================================================
+   18. TOP BAR
+   ========================================================================== */
+
+.ot-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  min-height: 58px;
+  padding: 0 16px;
+
+  background: var(--ot-surface);
+  border-bottom: 1px solid var(--ot-border);
+}
+
+.ot-topbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+
+/* ==========================================================================
+   19. THEME TOGGLE
+   ========================================================================== */
+
+.ot-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 38px;
+  height: 38px;
+
+  background: var(--ot-surface-2);
+  color: var(--ot-text);
+
+  border: 1px solid var(--ot-border);
+  border-radius: 50%;
+
+  cursor: pointer;
+
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.ot-theme-toggle:hover {
+  background: var(--ot-surface-hover);
+  border-color: var(--ot-border-strong);
+}
+
+.ot-theme-toggle:active {
+  transform: scale(0.95);
+}
+
+
+/* ==========================================================================
+   20. TABS
+   ========================================================================== */
+
+.ot-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  overflow-x: auto;
+
+  padding: 4px;
+
+  background: var(--ot-bg-soft);
+  border: 1px solid var(--ot-border);
+  border-radius: var(--ot-radius-md);
+}
+
+.ot-tab {
+  min-height: 32px;
+  padding: 0 11px;
+
+  background: transparent;
+  color: var(--ot-text-muted);
+
+  border-radius: var(--ot-radius-sm);
+
+  font-size: 0.72rem;
+  font-weight: 650;
+
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ot-tab:hover {
+  color: var(--ot-text);
+  background: var(--ot-surface-hover);
+}
+
+.ot-tab.active {
+  background: var(--ot-primary);
+  color: #ffffff;
+}
+
+
+/* ==========================================================================
+   21. TOGGLE SWITCH
+   ========================================================================== */
+
+.ot-switch {
+  position: relative;
+
+  display: inline-flex;
+  align-items: center;
+
+  width: 42px;
+  height: 23px;
+
+  flex: 0 0 auto;
+
+  background: var(--ot-border-strong);
+
+  border-radius: 999px;
+
+  cursor: pointer;
+
+  transition: background-color 150ms ease;
+}
+
+.ot-switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ot-switch::after {
+  content: "";
+
+  position: absolute;
+  left: 3px;
+  top: 3px;
+
+  width: 17px;
+  height: 17px;
+
+  background: #ffffff;
+  border-radius: 50%;
+
+  box-shadow: var(--ot-shadow-sm);
+
+  transition: transform 150ms ease;
+}
+
+.ot-switch:has(input:checked) {
+  background: var(--ot-success);
+}
+
+.ot-switch:has(input:checked)::after {
+  transform: translateX(19px);
+}
+
+
+/* ==========================================================================
+   22. ALERTS
+   ========================================================================== */
+ 
