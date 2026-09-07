@@ -847,3 +847,1471 @@ export function PasswordInput({
   const [visible, setVisible] = useState(false);
 
   return (
+    <Input
+      {...props}
+      type={visible ? "text" : "password"}
+      label={label}
+      hint={hint}
+      error={error}
+      required={required}
+      className={className}
+      icon="lock"
+      iconRight={
+        <button
+          type="button"
+          className="ot-input-action"
+          onClick={() => setVisible((value) => !value)}
+          aria-label={visible ? "Hide password" : "Show password"}
+        >
+          <Icon name={visible ? "eyeOff" : "eye"} size={17} />
+        </button>
+      }
+    />
+  );
+}
+
+export function SearchInput({
+  value,
+  onChange,
+  placeholder = "Search...",
+  className = "",
+  ...props
+}) {
+  return (
+    <Input
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      icon="search"
+      className={className}
+      {...props}
+    />
+  );
+}
+
+export function Select({
+  label,
+  hint,
+  error,
+  required,
+  options = [],
+  placeholder = "Select...",
+  value,
+  onChange,
+  className = "",
+  ...props
+}) {
+  return (
+    <Field label={label} hint={hint} error={error} required={required} className={className}>
+      <div className={cx("ot-select-wrap", error && "ot-input-error")}>
+        <select value={value ?? ""} onChange={onChange} className="ot-select" {...props}>
+          {placeholder ? <option value="">{placeholder}</option> : null}
+
+          {options.map((option) => {
+            const item =
+              typeof option === "string"
+                ? { value: option, label: option }
+                : option;
+
+            return (
+              <option
+                key={String(item.value)}
+                value={item.value}
+                disabled={item.disabled}
+              >
+                {item.label}
+              </option>
+            );
+          })}
+        </select>
+
+        <Icon name="chevronDown" size={15} className="ot-select-arrow" />
+      </div>
+    </Field>
+  );
+}
+
+export function Textarea({
+  label,
+  hint,
+  error,
+  required,
+  className = "",
+  ...props
+}) {
+  return (
+    <Field label={label} hint={hint} error={error} required={required} className={className}>
+      <textarea className={cx("ot-textarea", error && "ot-input-error")} {...props} />
+    </Field>
+  );
+}
+
+export function NumberInput(props) {
+  return <Input type="number" inputMode="decimal" {...props} />;
+}
+
+/* =========================================================
+   TOGGLE / SWITCH
+   ========================================================= */
+
+export function Toggle({
+  checked = false,
+  onChange,
+  disabled = false,
+  label,
+  description,
+  size = "md",
+  className = "",
+  id,
+}) {
+  const generatedId = useId();
+  const inputId = id || generatedId;
+
+  return (
+    <label
+      htmlFor={inputId}
+      className={cx(
+        "ot-toggle-row",
+        disabled && "ot-toggle-disabled",
+        className
+      )}
+    >
+      <span className={cx("ot-switch", `ot-switch-${size}`)}>
+        <input
+          id={inputId}
+          type="checkbox"
+          checked={Boolean(checked)}
+          disabled={disabled}
+          onChange={(event) => onChange?.(event.target.checked, event)}
+        />
+        <span className="ot-switch-track">
+          <span className="ot-switch-thumb" />
+        </span>
+      </span>
+
+      {label || description ? (
+        <span className="ot-toggle-copy">
+          {label ? <strong>{label}</strong> : null}
+          {description ? <small>{description}</small> : null}
+        </span>
+      ) : null}
+    </label>
+  );
+}
+
+export const Switch = Toggle;
+
+/* =========================================================
+   TABS
+   ========================================================= */
+
+export function Tabs({
+  tabs = [],
+  value,
+  defaultValue,
+  onChange,
+  className = "",
+  variant = "default",
+}) {
+  const firstValue = tabs[0]?.value ?? tabs[0]?.key;
+  const [internal, setInternal] = useState(defaultValue ?? firstValue);
+  const activeValue = value !== undefined ? value : internal;
+
+  const select = (tab) => {
+    const next = tab.value ?? tab.key;
+
+    if (value === undefined) {
+      setInternal(next);
+    }
+
+    onChange?.(next, tab);
+  };
+
+  return (
+    <div className={cx("ot-tabs", `ot-tabs-${variant}`, className)}>
+      <div className="ot-tab-list" role="tablist">
+        {tabs.map((tab) => {
+          const tabValue = tab.value ?? tab.key;
+          const active = tabValue === activeValue;
+
+          return (
+            <button
+              key={String(tabValue)}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              className={cx("ot-tab", active && "ot-tab-active")}
+              onClick={() => select(tab)}
+              disabled={tab.disabled}
+            >
+              {tab.icon
+                ? typeof tab.icon === "string"
+                  ? <Icon name={tab.icon} size={15} />
+                  : tab.icon
+                : null}
+              <span>{tab.label ?? tab.name}</span>
+              {tab.count !== undefined ? (
+                <span className="ot-tab-count">{tab.count}</span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+export function Table({
+  columns = [],
+  data = [],
+  rowKey = "id",
+  loading = false,
+  emptyMessage = "No data available.",
+  onRowClick,
+  compact = false,
+  stickyHeader = false,
+  className = "",
+  ...props
+}) {
+  const getKey = (row, index) =>
+    typeof rowKey === "function"
+      ? rowKey(row, index)
+      : row?.[rowKey] ?? index;
+
+  return (
+    <div
+      className={cx(
+        "ot-table-wrap",
+        compact && "ot-table-compact",
+        stickyHeader && "ot-table-sticky",
+        className
+      )}
+      {...props}
+    >
+      <table className="ot-table">
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th
+                key={column.key || column.accessor || column.label}
+                style={column.width ? { width: column.width } : undefined}
+                className={column.headerClassName}
+              >
+                {column.header ?? column.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          {loading ? (
+            <TableLoadingRow colSpan={columns.length} />
+          ) : data.length === 0 ? (
+            <tr>
+              <td colSpan={columns.length}>
+                <EmptyState
+                  compact
+                  title={emptyMessage}
+                  icon="database"
+                />
+              </td>
+            </tr>
+          ) : (
+            data.map((row, index) => (
+              <tr
+                key={String(getKey(row, index))}
+                className={onRowClick ? "ot-table-row-clickable" : ""}
+                onClick={onRowClick ? () => onRowClick(row, index) : undefined}
+              >
+                {columns.map((column) => {
+                  const accessor = column.accessor ?? column.key;
+                  const rawValue =
+                    typeof accessor === "function"
+                      ? accessor(row, index)
+                      : row?.[accessor];
+
+                  const content = column.render
+                    ? column.render(rawValue, row, index)
+                    : rawValue ?? "—";
+
+                  return (
+                    <td
+                      key={column.key || column.accessor || column.label}
+                      className={column.cellClassName}
+                    >
+                      {content}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function TableLoadingRow({ colSpan = 1 }) {
+  return (
+    <tr>
+      <td colSpan={colSpan}>
+        <div className="ot-table-loading">
+          <Spinner />
+          <span>Loading data...</span>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+/* =========================================================
+   MODAL / CONFIRM
+   ========================================================= */
+
+export function Modal({
+  open,
+  onClose,
+  title,
+  subtitle,
+  children,
+  footer,
+  size = "md",
+  closeOnOverlay = true,
+  closeOnEscape = true,
+  className = "",
+}) {
+  useEffect(() => {
+    if (!open || !closeOnEscape) return undefined;
+
+    const handler = (event) => {
+      if (event.key === "Escape") onClose?.();
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, closeOnEscape, onClose]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="ot-modal-overlay"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (closeOnOverlay && event.target === event.currentTarget) {
+          onClose?.();
+        }
+      }}
+    >
+      <div
+        className={cx("ot-modal", `ot-modal-${size}`, className)}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? "ot-modal-title" : undefined}
+        onMouseDown={stopEvent}
+      >
+        {(title || subtitle || onClose) && (
+          <div className="ot-modal-header">
+            <div>
+              {title ? <h3 id="ot-modal-title">{title}</h3> : null}
+              {subtitle ? <p>{subtitle}</p> : null}
+            </div>
+
+            {onClose ? (
+              <button
+                type="button"
+                className="ot-icon-btn"
+                onClick={onClose}
+                aria-label="Close"
+              >
+                <Icon name="close" size={18} />
+              </button>
+            ) : null}
+          </div>
+        )}
+
+        <div className="ot-modal-body">{children}</div>
+
+        {footer ? <div className="ot-modal-footer">{footer}</div> : null}
+      </div>
+    </div>
+  );
+}
+
+export function ConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  title = "Confirm action",
+  message = "Are you sure you want to continue?",
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  variant = "danger",
+  loading = false,
+}) {
+  return (
+    <Modal
+      open={open}
+      onClose={loading ? undefined : onClose}
+      title={title}
+      size="sm"
+      footer={
+        <div className="ot-modal-actions">
+          <Button
+            variant="secondary"
+            onClick={onClose}
+            disabled={loading}
+          >
+            {cancelText}
+          </Button>
+
+          <Button
+            variant={variant}
+            onClick={onConfirm}
+            loading={loading}
+          >
+            {confirmText}
+          </Button>
+        </div>
+      }
+    >
+      <div className="ot-confirm">
+        <div className={cx("ot-confirm-icon", `ot-confirm-${variant}`)}>
+          <Icon
+            name={variant === "danger" ? "warning" : "info"}
+            size={23}
+          />
+        </div>
+
+        <p>{message}</p>
+      </div>
+    </Modal>
+  );
+}
+
+/* =========================================================
+   DROPDOWN
+   ========================================================= */
+
+export function Dropdown({
+  trigger,
+  children,
+  align = "right",
+  className = "",
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handler = (event) => {
+      if (!ref.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className={cx("ot-dropdown", className)}>
+      <button
+        type="button"
+        className="ot-dropdown-trigger"
+        onClick={() => setOpen((value) => !value)}
+      >
+        {trigger}
+      </button>
+
+      {open ? (
+        <div className={cx("ot-dropdown-menu", `ot-dropdown-${align}`)}>
+          {typeof children === "function"
+            ? children(() => setOpen(false))
+            : children}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function DropdownItem({
+  children,
+  icon,
+  danger = false,
+  disabled = false,
+  onClick,
+}) {
+  return (
+    <button
+      type="button"
+      className={cx("ot-dropdown-item", danger && "ot-dropdown-item-danger")}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {icon
+        ? typeof icon === "string"
+          ? <Icon name={icon} size={16} />
+          : icon
+        : null}
+      <span>{children}</span>
+    </button>
+  );
+}
+
+/* =========================================================
+   LOADING / SKELETON / EMPTY / ERROR
+   ========================================================= */
+
+export function Spinner({ size = "md", className = "" }) {
+  return (
+    <span
+      className={cx("ot-spinner", `ot-spinner-${size}`, className)}
+      aria-label="Loading"
+      role="status"
+    />
+  );
+}
+
+export function Loading({
+  label = "Loading...",
+  full = false,
+  className = "",
+}) {
+  return (
+    <div className={cx("ot-loading", full && "ot-loading-full", className)}>
+      <Spinner />
+      {label ? <span>{label}</span> : null}
+    </div>
+  );
+}
+
+export function Skeleton({
+  width = "100%",
+  height = 18,
+  radius = "md",
+  className = "",
+}) {
+  return (
+    <span
+      className={cx("ot-skeleton", `ot-radius-${radius}`, className)}
+      style={{
+        width,
+        height,
+      }}
+      aria-hidden="true"
+    />
+  );
+}
+
+export function EmptyState({
+  title = "Nothing here yet",
+  description,
+  icon = "database",
+  action,
+  compact = false,
+  className = "",
+}) {
+  return (
+    <div className={cx("ot-empty", compact && "ot-empty-compact", className)}>
+      <div className="ot-empty-icon">
+        {typeof icon === "string" ? <Icon name={icon} size={24} /> : icon}
+      </div>
+
+      <h3>{title}</h3>
+
+      {description ? <p>{description}</p> : null}
+
+      {action ? <div className="ot-empty-action">{action}</div> : null}
+    </div>
+  );
+}
+
+export function ErrorState({
+  title = "Something went wrong",
+  message,
+  error,
+  retry,
+  className = "",
+}) {
+  const text =
+    message ||
+    (error instanceof Error ? error.message : error) ||
+    "The requested data could not be loaded.";
+
+  return (
+    <div className={cx("ot-error-state", className)}>
+      <div className="ot-error-icon">
+        <Icon name="error" size={24} />
+      </div>
+
+      <h3>{title}</h3>
+      <p>{text}</p>
+
+      {retry ? (
+        <Button variant="secondary" icon="refresh" onClick={retry}>
+          Retry
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/* =========================================================
+   ALERT
+   ========================================================= */
+
+export function Alert({
+  variant = "info",
+  title,
+  children,
+  icon,
+  dismissible = false,
+  onDismiss,
+  className = "",
+}) {
+  const defaultIcons = {
+    info: "info",
+    success: "success",
+    warning: "warning",
+    danger: "error",
+  };
+
+  return (
+    <div
+      className={cx("ot-alert", `ot-alert-${variant}`, className)}
+      role={variant === "danger" ? "alert" : "status"}
+    >
+      <div className="ot-alert-icon">
+        {typeof (icon || defaultIcons[variant]) === "string" ? (
+          <Icon name={icon || defaultIcons[variant]} size={18} />
+        ) : (
+          icon
+        )}
+      </div>
+
+      <div className="ot-alert-content">
+        {title ? <strong>{title}</strong> : null}
+        {children ? <div>{children}</div> : null}
+      </div>
+
+      {dismissible ? (
+        <button
+          type="button"
+          className="ot-alert-close"
+          onClick={onDismiss}
+          aria-label="Dismiss"
+        >
+          <Icon name="close" size={16} />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/* =========================================================
+   AVATAR
+   ========================================================= */
+
+export function Avatar({
+  name,
+  src,
+  size = "md",
+  status,
+  className = "",
+}) {
+  return (
+    <span className={cx("ot-avatar", `ot-avatar-${size}`, className)}>
+      {src ? (
+        <img src={src} alt={name || "User"} />
+      ) : (
+        <span>{getInitials(name || "User")}</span>
+      )}
+
+      {status ? (
+        <span className={cx("ot-avatar-status", `ot-avatar-status-${status}`)} />
+      ) : null}
+    </span>
+  );
+}
+
+/* =========================================================
+   TOOLTIP
+   ========================================================= */
+
+export function Tooltip({ children, content, position = "top" }) {
+  return (
+    <span className={cx("ot-tooltip", `ot-tooltip-${position}`)}>
+      {children}
+      {content ? <span className="ot-tooltip-content">{content}</span> : null}
+    </span>
+  );
+}
+
+/* =========================================================
+   PROGRESS
+   ========================================================= */
+
+export function Progress({
+  value = 0,
+  max = 100,
+  label,
+  showValue = false,
+  variant = "primary",
+  size = "md",
+  className = "",
+}) {
+  const safeMax = Number(max) || 100;
+  const safeValue = Math.min(
+    safeMax,
+    Math.max(0, Number(value) || 0)
+  );
+  const percent = (safeValue / safeMax) * 100;
+
+  return (
+    <div className={cx("ot-progress-wrap", className)}>
+      {label || showValue ? (
+        <div className="ot-progress-label">
+          {label ? <span>{label}</span> : <span />}
+          {showValue ? <span>{Math.round(percent)}%</span> : null}
+        </div>
+      ) : null}
+
+      <div
+        className={cx(
+          "ot-progress",
+          `ot-progress-${size}`,
+          `ot-progress-${variant}`
+        )}
+        role="progressbar"
+        aria-valuenow={safeValue}
+        aria-valuemin="0"
+        aria-valuemax={safeMax}
+      >
+        <span style={{ width: `${percent}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   DIVIDERS / SPACING
+   ========================================================= */
+
+export function Divider({ className = "" }) {
+  return <div className={cx("ot-divider", className)} />;
+}
+
+export function Stack({
+  children,
+  gap = "md",
+  direction = "column",
+  align,
+  justify,
+  className = "",
+}) {
+  return (
+    <div
+      className={cx(
+        "ot-stack",
+        `ot-stack-${direction}`,
+        `ot-gap-${gap}`,
+        align && `ot-align-${align}`,
+        justify && `ot-justify-${justify}`,
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function Row({
+  children,
+  gap = "md",
+  align = "center",
+  justify,
+  wrap = true,
+  className = "",
+}) {
+  return (
+    <Stack
+      direction="row"
+      gap={gap}
+      align={align}
+      justify={justify}
+      className={cx(wrap && "ot-row-wrap", className)}
+    >
+      {children}
+    </Stack>
+  );
+}
+
+/* =========================================================
+   GRID
+   ========================================================= */
+
+export function Grid({
+  children,
+  columns = 2,
+  gap = "md",
+  className = "",
+}) {
+  return (
+    <div
+      className={cx(
+        "ot-grid",
+        `ot-grid-${columns}`,
+        `ot-grid-gap-${gap}`,
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function ResponsiveGrid({
+  children,
+  minWidth = 240,
+  gap = 16,
+  className = "",
+}) {
+  return (
+    <div
+      className={cx("ot-responsive-grid", className)}
+      style={{
+        gridTemplateColumns: `repeat(auto-fit, minmax(${minWidth}px, 1fr))`,
+        gap,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* =========================================================
+   TRADING-SPECIFIC UI
+   ========================================================= */
+
+export function BuySellBadge({ side }) {
+  const normalized = String(side || "").toUpperCase();
+
+  if (normalized === "BUY") {
+    return <Badge variant="success" dot>BUY</Badge>;
+  }
+
+  if (normalized === "SELL") {
+    return <Badge variant="danger" dot>SELL</Badge>;
+  }
+
+  return <Badge variant="neutral">{side || "—"}</Badge>;
+}
+
+export function OrderStatus({ status }) {
+  return <StatusBadge status={status} />;
+}
+
+export function ConnectionStatus({
+  connected,
+  connecting = false,
+  label,
+}) {
+  if (connecting) {
+    return <StatusDot status="warning" pulse label={label || "Connecting"} />;
+  }
+
+  return (
+    <StatusDot
+      status={connected ? "success" : "danger"}
+      pulse={connected}
+      label={label || (connected ? "Connected" : "Disconnected")}
+    />
+  );
+}
+
+export function PnlValue({
+  value,
+  currency = "₹",
+  showSign = true,
+  className = "",
+}) {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return <span className={className}>—</span>;
+  }
+
+  const positive = numeric > 0;
+  const negative = numeric < 0;
+
+  const formatted = Math.abs(numeric).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  const sign = showSign
+    ? positive
+      ? "+"
+      : negative
+        ? "-"
+        : ""
+    : negative
+      ? "-"
+      : "";
+
+  return (
+    <span
+      className={cx(
+        "ot-pnl-value",
+        positive && "ot-pnl-positive",
+        negative && "ot-pnl-negative",
+        className
+      )}
+    >
+      {sign}
+      {currency}
+      {formatted}
+    </span>
+  );
+}
+
+export function PriceValue({
+  value,
+  decimals = 2,
+  prefix = "₹",
+  className = "",
+}) {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return <span className={className}>—</span>;
+  }
+
+  return (
+    <span className={className}>
+      {prefix}
+      {numeric.toLocaleString("en-IN", {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      })}
+    </span>
+  );
+}
+
+export function QuantityValue({
+  value,
+  decimals = 0,
+  className = "",
+}) {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return <span className={className}>—</span>;
+  }
+
+  return (
+    <span className={className}>
+      {numeric.toLocaleString("en-IN", {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      })}
+    </span>
+  );
+}
+
+/* =========================================================
+   SYMBOL / MARKET
+   ========================================================= */
+
+export function SymbolBadge({
+  symbol,
+  exchange,
+  name,
+  className = "",
+}) {
+  return (
+    <div className={cx("ot-symbol", className)}>
+      <div className="ot-symbol-main">
+        <strong>{symbol || "—"}</strong>
+        {exchange ? <span>{exchange}</span> : null}
+      </div>
+      {name ? <small>{name}</small> : null}
+    </div>
+  );
+}
+
+export function MarketTicker({
+  symbol,
+  value,
+  change,
+  changePercent,
+  exchange,
+  className = "",
+}) {
+  const positive = Number(change) > 0;
+  const negative = Number(change) < 0;
+
+  return (
+    <div className={cx("ot-market-ticker", className)}>
+      <SymbolBadge symbol={symbol} exchange={exchange} />
+
+      <div className="ot-market-ticker-price">
+        <strong>{value ?? "—"}</strong>
+
+        {(change !== undefined || changePercent !== undefined) && (
+          <span
+            className={cx(
+              positive && "ot-text-profit",
+              negative && "ot-text-loss"
+            )}
+          >
+            {change !== undefined ? change : ""}
+            {changePercent !== undefined
+              ? ` (${changePercent}%)`
+              : ""}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   CHART CONTAINER
+   ========================================================= */
+
+export function ChartContainer({
+  children,
+  title,
+  subtitle,
+  actions,
+  height = 320,
+  loading = false,
+  empty = false,
+  emptyMessage = "No chart data available.",
+  className = "",
+}) {
+  return (
+    <Card
+      title={title}
+      subtitle={subtitle}
+      actions={actions}
+      padding="none"
+      className={cx("ot-chart-card", className)}
+    >
+      <div
+        className="ot-chart-container"
+        style={{ minHeight: height }}
+      >
+        {loading ? (
+          <Loading label="Loading chart..." />
+        ) : empty ? (
+          <EmptyState
+            compact
+            icon="chartLine"
+            title={emptyMessage}
+          />
+        ) : (
+          children
+        )}
+      </div>
+    </Card>
+  );
+}
+
+/* =========================================================
+   SENSITIVE / EMERGENCY ACTION SURFACE
+   ========================================================= */
+
+export function EmergencyAction({
+  title = "Emergency control",
+  description,
+  actionLabel,
+  icon = "zap",
+  onAction,
+  disabled = false,
+  loading = false,
+  className = "",
+}) {
+  return (
+    <div className={cx("ot-emergency", className)}>
+      <div className="ot-emergency-icon">
+        <Icon name={icon} size={22} />
+      </div>
+
+      <div className="ot-emergency-copy">
+        <strong>{title}</strong>
+        {description ? <span>{description}</span> : null}
+      </div>
+
+      {onAction ? (
+        <Button
+          variant="danger"
+          icon={icon}
+          disabled={disabled}
+          loading={loading}
+          onClick={onAction}
+        >
+          {actionLabel || "Execute"}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/* =========================================================
+   DATA FRESHNESS
+   ========================================================= */
+
+export function DataFreshness({
+  timestamp,
+  label = "Updated",
+  className = "",
+}) {
+  const text = useMemo(() => {
+    if (!timestamp) return "Unavailable";
+
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return "Unavailable";
+
+    return date.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  }, [timestamp]);
+
+  return (
+    <span className={cx("ot-freshness", className)}>
+      <Icon name="clock" size={13} />
+      {label} {text}
+    </span>
+  );
+}
+
+/* =========================================================
+   PAGINATION
+   ========================================================= */
+
+export function Pagination({
+  page = 1,
+  totalPages = 1,
+  onChange,
+  className = "",
+}) {
+  if (totalPages <= 1) return null;
+
+  const pages = [];
+  const start = Math.max(1, page - 2);
+  const end = Math.min(totalPages, page + 2);
+
+  for (let index = start; index <= end; index += 1) {
+    pages.push(index);
+  }
+
+  return (
+    <div className={cx("ot-pagination", className)}>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon="chevronLeft"
+        aria-label="Previous page"
+        disabled={page <= 1}
+        onClick={() => onChange?.(page - 1)}
+      />
+
+      {start > 1 ? (
+        <>
+          <Button
+            variant={page === 1 ? "primary" : "ghost"}
+            size="sm"
+            onClick={() => onChange?.(1)}
+          >
+            1
+          </Button>
+          {start > 2 ? <span className="ot-pagination-more">…</span> : null}
+        </>
+      ) : null}
+
+      {pages.map((item) => (
+        <Button
+          key={item}
+          variant={item === page ? "primary" : "ghost"}
+          size="sm"
+          onClick={() => onChange?.(item)}
+        >
+          {item}
+        </Button>
+      ))}
+
+      {end < totalPages ? (
+        <>
+          {end < totalPages - 1 ? (
+            <span className="ot-pagination-more">…</span>
+          ) : null}
+
+          <Button
+            variant={page === totalPages ? "primary" : "ghost"}
+            size="sm"
+            onClick={() => onChange?.(totalPages)}
+          >
+            {totalPages}
+          </Button>
+        </>
+      ) : null}
+
+      <Button
+        variant="ghost"
+        size="sm"
+        icon="chevronRight"
+        aria-label="Next page"
+        disabled={page >= totalPages}
+        onClick={() => onChange?.(page + 1)}
+      />
+    </div>
+  );
+}
+
+/* =========================================================
+   SIDEBAR NAV ITEM
+   ========================================================= */
+
+export function NavItem({
+  icon,
+  label,
+  active = false,
+  badge,
+  collapsed = false,
+  onClick,
+  href,
+  className = "",
+}) {
+  const content = (
+    <>
+      <span className="ot-nav-item-icon">
+        {typeof icon === "string" ? <Icon name={icon} size={18} /> : icon}
+      </span>
+
+      {!collapsed ? <span className="ot-nav-item-label">{label}</span> : null}
+
+      {!collapsed && badge !== undefined ? (
+        <span className="ot-nav-item-badge">{badge}</span>
+      ) : null}
+    </>
+  );
+
+  const classes = cx(
+    "ot-nav-item",
+    active && "ot-nav-item-active",
+    collapsed && "ot-nav-item-collapsed",
+    className
+  );
+
+  if (href) {
+    return (
+      <a href={href} className={classes} onClick={onClick}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button type="button" className={classes} onClick={onClick}>
+      {content}
+    </button>
+  );
+}
+
+/* =========================================================
+   TOP BAR ICON BUTTON
+   ========================================================= */
+
+export function IconButton({
+  icon,
+  label,
+  size = "md",
+  variant = "ghost",
+  badge,
+  ...props
+}) {
+  return (
+    <button
+      type="button"
+      className={cx("ot-icon-btn", `ot-icon-btn-${size}`, `ot-icon-btn-${variant}`)}
+      aria-label={label}
+      title={label}
+      {...props}
+    >
+      {typeof icon === "string" ? <Icon name={icon} size={18} /> : icon}
+
+      {badge !== undefined ? (
+        <span className="ot-icon-btn-badge">{badge}</span>
+      ) : null}
+    </button>
+  );
+}
+
+/* =========================================================
+   THEME TOGGLE
+   ========================================================= */
+
+export function ThemeToggle({
+  theme = "dark",
+  onChange,
+  compact = false,
+  className = "",
+}) {
+  const dark = theme === "dark";
+
+  return (
+    <button
+      type="button"
+      className={cx(
+        "ot-theme-toggle",
+        compact && "ot-theme-toggle-compact",
+        className
+      )}
+      onClick={() => onChange?.(dark ? "light" : "dark")}
+      aria-label={`Switch to ${dark ? "light" : "dark"} theme`}
+      title={`Switch to ${dark ? "light" : "dark"} theme`}
+    >
+      <span className="ot-theme-toggle-icon">
+        <Icon name={dark ? "moon" : "sun"} size={17} />
+      </span>
+
+      {!compact ? (
+        <span>{dark ? "Dark" : "Light"}</span>
+      ) : null}
+    </button>
+  );
+}
+
+/* =========================================================
+   FORM ACTIONS
+   ========================================================= */
+
+export function FormActions({
+  children,
+  align = "right",
+  className = "",
+}) {
+  return (
+    <div
+      className={cx(
+        "ot-form-actions",
+        `ot-form-actions-${align}`,
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* =========================================================
+   LOG / TERMINAL LINE
+   ========================================================= */
+
+export function LogLine({
+  timestamp,
+  level = "info",
+  message,
+  source,
+  className = "",
+}) {
+  return (
+    <div className={cx("ot-log-line", className)}>
+      {timestamp ? <time>{timestamp}</time> : null}
+
+      <Badge variant={level === "error" ? "danger" : level}>
+        {String(level).toUpperCase()}
+      </Badge>
+
+      {source ? <span className="ot-log-source">{source}</span> : null}
+
+      <span className="ot-log-message">{message || "—"}</span>
+    </div>
+  );
+}
+
+/* =========================================================
+   EXPORT GROUP
+   ========================================================= */
+
+export default {
+  Icon,
+  Button,
+  Card,
+  Panel,
+  Section,
+  PageHeader,
+  MetricCard,
+  Badge,
+  StatusDot,
+  StatusBadge,
+  Field,
+  Input,
+  PasswordInput,
+  SearchInput,
+  Select,
+  Textarea,
+  NumberInput,
+  Toggle,
+  Switch,
+  Tabs,
+  Table,
+  TableLoadingRow,
+  Modal,
+  ConfirmDialog,
+  Dropdown,
+  DropdownItem,
+  Spinner,
+  Loading,
+  Skeleton,
+  EmptyState,
+  ErrorState,
+  Alert,
+  Avatar,
+  Tooltip,
+  Progress,
+  Divider,
+  Stack,
+  Row,
+  Grid,
+  ResponsiveGrid,
+  BuySellBadge,
+  OrderStatus,
+  ConnectionStatus,
+  PnlValue,
+  PriceValue,
+  QuantityValue,
+  SymbolBadge,
+  MarketTicker,
+  ChartContainer,
+  EmergencyAction,
+  DataFreshness,
+  Pagination,
+  NavItem,
+  IconButton,
+  ThemeToggle,
+  FormActions,
+  LogLine,
+};
