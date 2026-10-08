@@ -1,0 +1,160 @@
+name: Owner Trading VPS Auto Refresh
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**.zip'
+  workflow_dispatch:
+
+concurrency:
+  group: owner-trading-vps-refresh
+  cancel-in-progress: true
+
+jobs:
+  refresh-vps:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Refresh VPS source from GitHub
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/owner_trading_github_actions
+          chmod 600 ~/.ssh/owner_trading_github_actions
+
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          ssh \
+            -i ~/.ssh/owner_trading_github_actions \
+            -p "$VPS_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" \
+            "GITHUB_SHA='$GITHUB_SHA' bash -s" <<'REMOTE_SCRIPT'
+
+          set -euo pipefail
+
+          echo "=== STOP SERVICES ==="
+          sudo systemctl stop owner-trading-broker || true
+          sudo systemctl stop owner-trading-backend || true
+
+          echo "=== REMOVE OLD SOURCE ==="
+          sudo rm -rf /home/ubuntu/owner-trading
+
+          echo "=== REMOVE OLD RUNTIME ==="
+          sudo rm -rf /opt/owner-trading
+
+          echo "=== REMOVE OLD BROKER OVERRIDE ==="
+          sudo rm -f /etc/systemd/system/owner-trading-broker.service.d/override.conf
+
+          echo "=== FRESH GITHUB CLONE ==="
+          cd /home/ubuntu
+          git clone https://github.com/Not-created/owner-trading.git owner-trading
+
+          cd /home/ubuntu/owner-trading
+          git checkout main
+          git pull origin main
+
+          echo "=== CURRENT COMMIT ==="
+          git rev-parse HEAD
+
+          echo "=== FIND ZIP FROM CURRENT COMMIT ==="
+
+          ZIP_FILE="$(
+            git diff-tree \
+              --no-commit-id \
+              --name-status \
+              -r \
+              "$GITHUB_SHA" \
+              -- '*.zip' |
+            awk '$1 == "A" || $1 == "M" {
+              print $2
+            }' |
+            head -n 1
+          )"
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: No newly added/modified ZIP found in triggering commit."
+            exit 1
+          fi
+
+          echo "Selected ZIP: $ZIP_FILE"
+
+          if [ ! -f "$ZIP_FILE" ]; then
+            echo "ERROR: Selected ZIP does not exist: $ZIP_FILE"
+            exit 1
+          fi
+
+          echo "=== ZIP INTEGRITY TEST ==="
+          unzip -t -- "$ZIP_FILE"
+
+          echo "=== EXTRACT ZIP ==="
+
+          rm -rf /tmp/owner-trading-extract
+          mkdir -p /tmp/owner-trading-extract
+
+          unzip -q -- "$ZIP_FILE" -d /tmp/owner-trading-extract
+
+          echo "=== LOCATE PROJECT ROOT ==="
+
+          PROJECT_ROOT="$(
+            find /tmp/owner-trading-extract \
+              -type f \
+              -name deploy.sh \
+              -print -quit |
+            xargs -r dirname
+          )"
+
+          if [ -z "$PROJECT_ROOT" ]; then
+            echo "ERROR: deploy.sh not found inside ZIP."
+            exit 1
+          fi
+
+          echo "Project root: $PROJECT_ROOT"
+
+          for required in backend broker-service frontend deployment deploy.sh; do
+            if [ ! -e "$PROJECT_ROOT/$required" ]; then
+              echo "ERROR: Missing required item: $required"
+              exit 1
+            fi
+          done
+
+          echo "=== REPLACE SOURCE WITH EXTRACTED PROJECT ==="
+
+          rm -rf /home/ubuntu/owner-trading/backend
+          rm -rf /home/ubuntu/owner-trading/broker-service
+          rm -rf /home/ubuntu/owner-trading/frontend
+          rm -rf /home/ubuntu/owner-trading/deployment
+
+          cp -a "$PROJECT_ROOT/backend" /home/ubuntu/owner-trading/
+          cp -a "$PROJECT_ROOT/broker-service" /home/ubuntu/owner-trading/
+          cp -a "$PROJECT_ROOT/frontend" /home/ubuntu/owner-trading/
+          cp -a "$PROJECT_ROOT/deployment" /home/ubuntu/owner-trading/
+          cp -a "$PROJECT_ROOT/deploy.sh" /home/ubuntu/owner-trading/
+
+          chmod +x /home/ubuntu/owner-trading/deploy.sh
+
+          rm -rf /tmp/owner-trading-extract
+
+          echo "======================================"
+          echo "SOURCE REFRESH COMPLETED SUCCESSFULLY"
+          echo "======================================"
+          echo
+          echo "Run deployment manually:"
+          echo
+          echo "cd /home/ubuntu/owner-trading"
+          echo "./deploy.sh"
+
+          REMOTE_SCRIPT
