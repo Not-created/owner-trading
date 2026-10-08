@@ -41,9 +41,7 @@ jobs:
           if ! ssh-keygen -y \
               -f ~/.ssh/owner_trading_github_actions \
               >/dev/null 2>&1; then
-            echo "ERROR: VPS_SSH_PRIVATE_KEY is not a valid private SSH key."
-            echo "The GitHub Secret must contain the Base64 output of:"
-            echo "base64 -w 0 ~/.ssh/github_actions_owner_trading"
+            echo "ERROR: VPS_SSH_PRIVATE_KEY is not a valid Base64-encoded private SSH key."
             exit 1
           fi
 
@@ -66,9 +64,14 @@ jobs:
           set -euo pipefail
 
           REPO_URL="https://github.com/Not-created/owner-trading.git"
+
           SOURCE_ROOT="/home/ubuntu/owner-trading"
           RUNTIME_ROOT="/opt/owner-trading"
-          EXTRACT_ROOT="/tmp/owner-trading-extract"
+
+          WORK_ROOT="/tmp/owner-trading-auto-refresh"
+          REPO_ROOT="$WORK_ROOT/repo"
+          EXTRACT_ROOT="$WORK_ROOT/extract"
+          PROJECT_ROOT=""
 
           echo "======================================"
           echo "OWNER TRADING VPS AUTO REFRESH"
@@ -78,6 +81,131 @@ jobs:
           echo "=== CHECK VPS PRIVILEGES ==="
 
           sudo -n true
+
+          echo
+          echo "=== PREPARE TEMPORARY WORKSPACE ==="
+
+          sudo rm -rf "$WORK_ROOT"
+          sudo mkdir -p "$REPO_ROOT" "$EXTRACT_ROOT"
+          sudo chown -R ubuntu:ubuntu "$WORK_ROOT"
+
+          echo
+          echo "=== FRESH GITHUB CLONE ==="
+
+          git clone --branch main --single-branch "$REPO_URL" "$REPO_ROOT"
+
+          cd "$REPO_ROOT"
+
+          CURRENT_COMMIT="$(git rev-parse HEAD)"
+
+          echo
+          echo "Current GitHub commit:"
+          echo "$CURRENT_COMMIT"
+
+          echo
+          echo "=== FIND ZIP IN CURRENT REPOSITORY ==="
+
+          mapfile -d '' ZIP_FILES < <(
+            find "$REPO_ROOT" \
+              -maxdepth 1 \
+              -type f \
+              -iname '*.zip' \
+              -print0
+          )
+
+          ZIP_COUNT="${#ZIP_FILES[@]}"
+
+          if [ "$ZIP_COUNT" -eq 0 ]; then
+            echo
+            echo "No ZIP file is currently present in main."
+            echo "This is expected when the previous ZIP was deleted before"
+            echo "the replacement ZIP is uploaded."
+            echo
+            echo "Nothing was changed on the VPS."
+            echo "Waiting for the next ZIP upload."
+            sudo rm -rf "$WORK_ROOT"
+            exit 0
+          fi
+
+          if [ "$ZIP_COUNT" -gt 1 ]; then
+            echo
+            echo "ERROR: Multiple ZIP files found in main."
+            echo "Automatic refresh is refusing to guess."
+            echo
+            printf '%s\n' "${ZIP_FILES[@]}"
+            sudo rm -rf "$WORK_ROOT"
+            exit 1
+          fi
+
+          ZIP_PATH="${ZIP_FILES[0]}"
+          ZIP_FILE="$(basename "$ZIP_PATH")"
+
+          echo "Selected ZIP:"
+          echo "$ZIP_FILE"
+
+          echo
+          echo "=== ZIP INTEGRITY TEST ==="
+
+          unzip -t -- "$ZIP_PATH"
+
+          echo
+          echo "=== CHECK ZIP PATH SAFETY ==="
+
+          if unzip -Z1 "$ZIP_PATH" |
+              grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+            echo "ERROR: Unsafe path detected inside ZIP."
+            echo "Refresh refused before touching the existing deployment."
+            sudo rm -rf "$WORK_ROOT"
+            exit 1
+          fi
+
+          echo
+          echo "=== EXTRACT ZIP ==="
+
+          unzip -q "$ZIP_PATH" -d "$EXTRACT_ROOT"
+
+          echo
+          echo "=== LOCATE PROJECT ROOT ==="
+
+          PROJECT_ROOT="$(
+            find "$EXTRACT_ROOT" \
+              -type f \
+              -name deploy.sh \
+              -print -quit |
+            xargs -r dirname
+          )"
+
+          if [ -z "$PROJECT_ROOT" ]; then
+            echo "ERROR: deploy.sh not found inside ZIP."
+            echo "Existing VPS deployment was NOT changed."
+            sudo rm -rf "$WORK_ROOT"
+            exit 1
+          fi
+
+          echo "Project root:"
+          echo "$PROJECT_ROOT"
+
+          echo
+          echo "=== VERIFY REQUIRED PROJECT STRUCTURE ==="
+
+          for required in \
+            backend \
+            broker-service \
+            frontend \
+            deployment \
+            deploy.sh
+          do
+            if [ ! -e "$PROJECT_ROOT/$required" ]; then
+              echo "ERROR: Missing required item: $required"
+              echo "Existing VPS deployment was NOT changed."
+              sudo rm -rf "$WORK_ROOT"
+              exit 1
+            fi
+          done
+
+          echo
+          echo "=== VALIDATION COMPLETE ==="
+          echo "The new ZIP passed all pre-delete checks."
 
           echo
           echo "=== STOP SERVICES ==="
@@ -102,120 +230,18 @@ jobs:
             /etc/systemd/system/owner-trading-broker.service.d/override.conf
 
           echo
-          echo "=== FRESH GITHUB CLONE ==="
+          echo "=== INSTALL VALIDATED PROJECT ==="
 
-          cd /home/ubuntu
+          sudo mkdir -p "$SOURCE_ROOT"
 
-          git clone "$REPO_URL" owner-trading
-
-          cd "$SOURCE_ROOT"
-
-          git checkout main
-          git pull --ff-only origin main
-
-          echo
-          echo "=== CURRENT GITHUB COMMIT ==="
-
-          CURRENT_COMMIT="$(git rev-parse HEAD)"
-
-          echo "$CURRENT_COMMIT"
-
-          echo
-          echo "=== FIND ZIP FILES IN CURRENT GITHUB COMMIT ==="
-
-          mapfile -t ZIP_FILES < <(
-            git ls-tree -r --name-only HEAD -- '*.zip'
-          )
-
-          if [ "${#ZIP_FILES[@]}" -eq 0 ]; then
-            echo "ERROR: No ZIP file found in the current GitHub commit."
-            exit 1
-          fi
-
-          if [ "${#ZIP_FILES[@]}" -gt 1 ]; then
-            echo "ERROR: More than one ZIP file exists in the repository."
-            echo "This would make automatic deployment ambiguous."
-            echo
-            printf '%s\n' "${ZIP_FILES[@]}"
-            exit 1
-          fi
-
-          ZIP_FILE="${ZIP_FILES[0]}"
-
-          echo "Selected ZIP:"
-          echo "$ZIP_FILE"
-
-          if [ ! -f "$SOURCE_ROOT/$ZIP_FILE" ]; then
-            echo "ERROR: Selected ZIP does not exist:"
-            echo "$SOURCE_ROOT/$ZIP_FILE"
-            exit 1
-          fi
-
-          echo
-          echo "=== ZIP INTEGRITY TEST ==="
-
-          unzip -t -- "$SOURCE_ROOT/$ZIP_FILE"
-
-          echo
-          echo "=== PREPARE EXTRACTION DIRECTORY ==="
-
-          sudo rm -rf "$EXTRACT_ROOT"
-          sudo mkdir -p "$EXTRACT_ROOT"
-
-          echo
-          echo "=== EXTRACT ZIP ==="
-
-          sudo unzip -q \
-            -- "$SOURCE_ROOT/$ZIP_FILE" \
-            -d "$EXTRACT_ROOT"
-
-          echo
-          echo "=== LOCATE PROJECT ROOT ==="
-
-          PROJECT_ROOT="$(
-            sudo find "$EXTRACT_ROOT" \
-              -type f \
-              -name deploy.sh \
-              -print -quit |
-            xargs -r dirname
-          )"
-
-          if [ -z "$PROJECT_ROOT" ]; then
-            echo "ERROR: deploy.sh not found inside ZIP."
-            exit 1
-          fi
-
-          echo "Project root:"
-          echo "$PROJECT_ROOT"
-
-          echo
-          echo "=== VERIFY REQUIRED PROJECT STRUCTURE ==="
-
-          for required in \
-            backend \
-            broker-service \
-            frontend \
-            deployment \
-            deploy.sh
-          do
-            if [ ! -e "$PROJECT_ROOT/$required" ]; then
-              echo "ERROR: Missing required item: $required"
-              exit 1
-            fi
-          done
-
-          echo
-          echo "=== REPLACE SOURCE WITH EXTRACTED PROJECT ==="
-
-          sudo rsync -a \
-            --exclude '.git/' \
-            "$PROJECT_ROOT/" \
-            "$SOURCE_ROOT/"
+          sudo cp -a \
+            "$PROJECT_ROOT"/. \
+            "$SOURCE_ROOT"/
 
           sudo chmod +x "$SOURCE_ROOT/deploy.sh"
 
           echo
-          echo "=== VERIFY FINAL SOURCE ==="
+          echo "=== VERIFY INSTALLED SOURCE ==="
 
           sudo test -x "$SOURCE_ROOT/deploy.sh"
           sudo test -d "$SOURCE_ROOT/backend"
@@ -224,9 +250,9 @@ jobs:
           sudo test -d "$SOURCE_ROOT/deployment"
 
           echo
-          echo "=== CLEAN EXTRACTION DIRECTORY ==="
+          echo "=== CLEAN TEMPORARY WORKSPACE ==="
 
-          sudo rm -rf "$EXTRACT_ROOT"
+          sudo rm -rf "$WORK_ROOT"
 
           echo
           echo "======================================"
@@ -242,7 +268,7 @@ jobs:
           echo "$ZIP_FILE"
 
           echo
-          echo "Deployment has NOT been started automatically."
+          echo "Deployment was NOT started automatically."
 
           echo
           echo "Run manually:"
