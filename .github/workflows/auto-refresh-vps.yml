@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - '**.zip'
+
   workflow_dispatch:
 
 concurrency:
@@ -23,18 +24,25 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-          GITHUB_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+
+          echo "=== PREPARE SSH ==="
 
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/owner_trading_github_actions
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" \
+            > ~/.ssh/owner_trading_github_actions
+
           chmod 600 ~/.ssh/owner_trading_github_actions
 
-          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" \
+            >> ~/.ssh/known_hosts
+
           chmod 600 ~/.ssh/known_hosts
+
+          echo "=== CONNECT TO VPS ==="
 
           ssh \
             -i ~/.ssh/owner_trading_github_actions \
@@ -42,75 +50,108 @@ jobs:
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             "$VPS_USER@$VPS_HOST" \
-            "GITHUB_SHA='$GITHUB_SHA' bash -s" <<'REMOTE_SCRIPT'
+            'bash -s' <<'REMOTE_SCRIPT'
 
           set -euo pipefail
 
+          REPO_URL="https://github.com/Not-created/owner-trading.git"
+          SOURCE_ROOT="/home/ubuntu/owner-trading"
+          RUNTIME_ROOT="/opt/owner-trading"
+          EXTRACT_ROOT="/tmp/owner-trading-extract"
+
+          echo "======================================"
+          echo "OWNER TRADING VPS AUTO REFRESH"
+          echo "======================================"
+
+          echo
           echo "=== STOP SERVICES ==="
+
           sudo systemctl stop owner-trading-broker || true
           sudo systemctl stop owner-trading-backend || true
 
+          echo
           echo "=== REMOVE OLD SOURCE ==="
-          sudo rm -rf /home/ubuntu/owner-trading
 
+          sudo rm -rf "$SOURCE_ROOT"
+
+          echo
           echo "=== REMOVE OLD RUNTIME ==="
-          sudo rm -rf /opt/owner-trading
 
+          sudo rm -rf "$RUNTIME_ROOT"
+
+          echo
           echo "=== REMOVE OLD BROKER OVERRIDE ==="
-          sudo rm -f /etc/systemd/system/owner-trading-broker.service.d/override.conf
 
+          sudo rm -f \
+            /etc/systemd/system/owner-trading-broker.service.d/override.conf
+
+          echo
           echo "=== FRESH GITHUB CLONE ==="
+
           cd /home/ubuntu
-          git clone https://github.com/Not-created/owner-trading.git owner-trading
 
-          cd /home/ubuntu/owner-trading
+          git clone "$REPO_URL" owner-trading
+
+          cd "$SOURCE_ROOT"
+
           git checkout main
-          git pull origin main
+          git pull --ff-only origin main
 
-          echo "=== CURRENT COMMIT ==="
-          git rev-parse HEAD
+          echo
+          echo "=== CURRENT GITHUB COMMIT ==="
 
-          echo "=== FIND ZIP FROM CURRENT COMMIT ==="
+          CURRENT_COMMIT="$(git rev-parse HEAD)"
+
+          echo "$CURRENT_COMMIT"
+
+          echo
+          echo "=== FIND LATEST ZIP IN GIT HISTORY ==="
 
           ZIP_FILE="$(
-            git diff-tree \
-              --no-commit-id \
-              --name-status \
-              -r \
-              "$GITHUB_SHA" \
+            git log \
+              --format= \
+              --name-only \
+              --diff-filter=AMR \
               -- '*.zip' |
-            awk '$1 == "A" || $1 == "M" {
-              print $2
-            }' |
-            head -n 1
+            awk 'NF { print; exit }'
           )"
 
           if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: No newly added/modified ZIP found in triggering commit."
+            echo "ERROR: No ZIP file found in Git history."
             exit 1
           fi
 
           echo "Selected ZIP: $ZIP_FILE"
 
-          if [ ! -f "$ZIP_FILE" ]; then
-            echo "ERROR: Selected ZIP does not exist: $ZIP_FILE"
+          if [ ! -f "$SOURCE_ROOT/$ZIP_FILE" ]; then
+            echo "ERROR: Selected ZIP does not exist:"
+            echo "$SOURCE_ROOT/$ZIP_FILE"
             exit 1
           fi
 
+          echo
           echo "=== ZIP INTEGRITY TEST ==="
-          unzip -t -- "$ZIP_FILE"
 
+          unzip -t -- "$SOURCE_ROOT/$ZIP_FILE"
+
+          echo
+          echo "=== PREPARE EXTRACTION DIRECTORY ==="
+
+          sudo rm -rf "$EXTRACT_ROOT"
+          sudo mkdir -p "$EXTRACT_ROOT"
+
+          echo
           echo "=== EXTRACT ZIP ==="
 
-          rm -rf /tmp/owner-trading-extract
-          mkdir -p /tmp/owner-trading-extract
+          sudo unzip -q \
+            -- "$SOURCE_ROOT/$ZIP_FILE" \
+            -d "$EXTRACT_ROOT"
 
-          unzip -q -- "$ZIP_FILE" -d /tmp/owner-trading-extract
-
+          echo
           echo "=== LOCATE PROJECT ROOT ==="
 
           PROJECT_ROOT="$(
-            find /tmp/owner-trading-extract \
+            sudo find "$EXTRACT_ROOT" \
               -type f \
               -name deploy.sh \
               -print -quit |
@@ -124,35 +165,64 @@ jobs:
 
           echo "Project root: $PROJECT_ROOT"
 
-          for required in backend broker-service frontend deployment deploy.sh; do
+          echo
+          echo "=== VERIFY REQUIRED PROJECT STRUCTURE ==="
+
+          for required in \
+            backend \
+            broker-service \
+            frontend \
+            deployment \
+            deploy.sh
+          do
             if [ ! -e "$PROJECT_ROOT/$required" ]; then
               echo "ERROR: Missing required item: $required"
               exit 1
             fi
           done
 
+          echo
           echo "=== REPLACE SOURCE WITH EXTRACTED PROJECT ==="
 
-          rm -rf /home/ubuntu/owner-trading/backend
-          rm -rf /home/ubuntu/owner-trading/broker-service
-          rm -rf /home/ubuntu/owner-trading/frontend
-          rm -rf /home/ubuntu/owner-trading/deployment
+          sudo rsync -a \
+            --exclude '.git/' \
+            "$PROJECT_ROOT/" \
+            "$SOURCE_ROOT/"
 
-          cp -a "$PROJECT_ROOT/backend" /home/ubuntu/owner-trading/
-          cp -a "$PROJECT_ROOT/broker-service" /home/ubuntu/owner-trading/
-          cp -a "$PROJECT_ROOT/frontend" /home/ubuntu/owner-trading/
-          cp -a "$PROJECT_ROOT/deployment" /home/ubuntu/owner-trading/
-          cp -a "$PROJECT_ROOT/deploy.sh" /home/ubuntu/owner-trading/
+          sudo chmod +x "$SOURCE_ROOT/deploy.sh"
 
-          chmod +x /home/ubuntu/owner-trading/deploy.sh
+          echo
+          echo "=== VERIFY FINAL SOURCE ==="
 
-          rm -rf /tmp/owner-trading-extract
+          sudo test -x "$SOURCE_ROOT/deploy.sh"
+          sudo test -d "$SOURCE_ROOT/backend"
+          sudo test -d "$SOURCE_ROOT/broker-service"
+          sudo test -d "$SOURCE_ROOT/frontend"
+          sudo test -d "$SOURCE_ROOT/deployment"
 
+          echo
+          echo "=== CLEAN EXTRACTION DIRECTORY ==="
+
+          sudo rm -rf "$EXTRACT_ROOT"
+
+          echo
           echo "======================================"
           echo "SOURCE REFRESH COMPLETED SUCCESSFULLY"
           echo "======================================"
+
           echo
-          echo "Run deployment manually:"
+          echo "Git commit:"
+          echo "$CURRENT_COMMIT"
+
+          echo
+          echo "Selected ZIP:"
+          echo "$ZIP_FILE"
+
+          echo
+          echo "Deployment has NOT been started automatically."
+
+          echo
+          echo "Run manually:"
           echo
           echo "cd /home/ubuntu/owner-trading"
           echo "./deploy.sh"
