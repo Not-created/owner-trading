@@ -32,10 +32,20 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" \
+          printf '%s' "$VPS_SSH_PRIVATE_KEY" \
+            | base64 --decode \
             > ~/.ssh/owner_trading_github_actions
 
           chmod 600 ~/.ssh/owner_trading_github_actions
+
+          if ! ssh-keygen -y \
+              -f ~/.ssh/owner_trading_github_actions \
+              >/dev/null 2>&1; then
+            echo "ERROR: VPS_SSH_PRIVATE_KEY is not a valid private SSH key."
+            echo "The GitHub Secret must contain the Base64 output of:"
+            echo "base64 -w 0 ~/.ssh/github_actions_owner_trading"
+            exit 1
+          fi
 
           ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" \
             >> ~/.ssh/known_hosts
@@ -49,6 +59,7 @@ jobs:
             -p "$VPS_PORT" \
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
+            -o IdentitiesOnly=yes \
             "$VPS_USER@$VPS_HOST" \
             'bash -s' <<'REMOTE_SCRIPT'
 
@@ -62,6 +73,11 @@ jobs:
           echo "======================================"
           echo "OWNER TRADING VPS AUTO REFRESH"
           echo "======================================"
+
+          echo
+          echo "=== CHECK VPS PRIVILEGES ==="
+
+          sudo -n true
 
           echo
           echo "=== STOP SERVICES ==="
@@ -105,23 +121,29 @@ jobs:
           echo "$CURRENT_COMMIT"
 
           echo
-          echo "=== FIND LATEST ZIP IN GIT HISTORY ==="
+          echo "=== FIND ZIP FILES IN CURRENT GITHUB COMMIT ==="
 
-          ZIP_FILE="$(
-            git log \
-              --format= \
-              --name-only \
-              --diff-filter=AMR \
-              -- '*.zip' |
-            awk 'NF { print; exit }'
-          )"
+          mapfile -t ZIP_FILES < <(
+            git ls-tree -r --name-only HEAD -- '*.zip'
+          )
 
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: No ZIP file found in Git history."
+          if [ "${#ZIP_FILES[@]}" -eq 0 ]; then
+            echo "ERROR: No ZIP file found in the current GitHub commit."
             exit 1
           fi
 
-          echo "Selected ZIP: $ZIP_FILE"
+          if [ "${#ZIP_FILES[@]}" -gt 1 ]; then
+            echo "ERROR: More than one ZIP file exists in the repository."
+            echo "This would make automatic deployment ambiguous."
+            echo
+            printf '%s\n' "${ZIP_FILES[@]}"
+            exit 1
+          fi
+
+          ZIP_FILE="${ZIP_FILES[0]}"
+
+          echo "Selected ZIP:"
+          echo "$ZIP_FILE"
 
           if [ ! -f "$SOURCE_ROOT/$ZIP_FILE" ]; then
             echo "ERROR: Selected ZIP does not exist:"
@@ -163,7 +185,8 @@ jobs:
             exit 1
           fi
 
-          echo "Project root: $PROJECT_ROOT"
+          echo "Project root:"
+          echo "$PROJECT_ROOT"
 
           echo
           echo "=== VERIFY REQUIRED PROJECT STRUCTURE ==="
